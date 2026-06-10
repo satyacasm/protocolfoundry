@@ -77,9 +77,14 @@ the large-spec campaign.
       (tool surface, gates, eval report, forced-override attribution), and
       audit viewer with kind filters. Reads the file release store + audit
       log directly — no DB yet.
-- [ ] Dashboard v2 (write paths): source upload, graph review/curation UI,
-      promote/rollback buttons — needs auth + the Postgres store first
-- [ ] Postgres control-plane store replacing the file release store (ADR-0005)
+- [x] Postgres control-plane store (`PgReleaseStore`, ADR-0006): same
+      `ReleaseStore` interface and gate semantics, selected via
+      `PF_DATABASE_URL` across gateway/CLI/dashboard; pg-mem tests, no infra.
+- [x] Dashboard auth (ADR-0006): `PF_DASHBOARD_PASSWORD` → HMAC-signed 12h
+      session cookie via middleware; open-mode banner when unset;
+      single-operator placeholder until SSO at design-partner onboarding.
+- [ ] Dashboard v2 (write paths): promote/rollback buttons, curation review
+      UI, source upload — now unblocked by auth + Postgres
 - [ ] Credential vault (KMS-encrypted), per-tool scopes
 - [ ] OAuth 2.1 authorization on the gateway (MCP auth spec)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME

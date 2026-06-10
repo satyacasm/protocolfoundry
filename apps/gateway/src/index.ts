@@ -2,7 +2,8 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { McpServerManifest } from "@protocolfoundry/core";
 import {
-  FileReleaseStore,
+  createReleaseStoreFromEnv,
+  describeReleaseBackend,
   releaseManifestSource,
   staticManifestSource,
 } from "@protocolfoundry/releases";
@@ -60,10 +61,10 @@ const isMain = process.argv[1]?.replace(/\\/g, "/").endsWith("gateway/src/index.
 
 if (isMain) {
   const manifestPath = process.env.PF_MANIFEST_PATH;
-  const releasesDir = process.env.PF_RELEASES_DIR;
-  if (!manifestPath && !releasesDir) {
+  const releaseMode = Boolean(process.env.PF_RELEASES_DIR || process.env.PF_DATABASE_URL);
+  if (!manifestPath && !releaseMode) {
     console.error(
-      "Set PF_RELEASES_DIR (serve live releases, hot promote/rollback) or PF_MANIFEST_PATH (dev: static manifest file/dir)",
+      "Set PF_DATABASE_URL or PF_RELEASES_DIR (serve live releases, hot promote/rollback) or PF_MANIFEST_PATH (dev: static manifest file/dir)",
     );
     process.exit(1);
   }
@@ -75,13 +76,15 @@ if (isMain) {
     approveAll: process.env.PF_APPROVE_ALL === "true",
   };
 
-  const source = releasesDir
-    ? releaseManifestSource(new FileReleaseStore(releasesDir))
+  const source = releaseMode
+    ? releaseManifestSource(createReleaseStoreFromEnv())
     : staticManifestSource(await loadManifests(manifestPath!));
   const app = createGatewayApp(source, options);
   app.listen(port, async () => {
     const names = await source.names();
-    const mode = releasesDir ? `live releases from ${releasesDir}` : `static manifests from ${manifestPath}`;
+    const mode = releaseMode
+      ? `live releases, ${describeReleaseBackend()}`
+      : `static manifests from ${manifestPath}`;
     console.log(`[gateway] mode: ${mode}`);
     for (const name of names) {
       console.log(`[gateway] serving "${name}" at http://localhost:${port}/mcp/${name}`);

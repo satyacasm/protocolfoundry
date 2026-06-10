@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
 import { CurationProposal, EvalRun, McpServerManifest, WorkflowGraph } from "@protocolfoundry/core";
-import { FileReleaseStore, ReleaseGateError } from "@protocolfoundry/releases";
+import { createReleaseStoreFromEnv, ReleaseGateError } from "@protocolfoundry/releases";
 import {
   applyCuration,
   createAnthropicCurator,
@@ -238,7 +238,14 @@ async function main(): Promise<void> {
 
   if (command === "release") {
     const [action, ...args] = positional;
-    const store = new FileReleaseStore(flags.get("--dir") ?? "releases");
+    // Backend: --db <postgres-url> > PF_DATABASE_URL > --dir / PF_RELEASES_DIR
+    const dbUrl = flags.get("--db");
+    const dir = flags.get("--dir");
+    const store = createReleaseStoreFromEnv({
+      ...process.env,
+      ...(dbUrl ? { PF_DATABASE_URL: dbUrl } : {}),
+      ...(dir ? { PF_DATABASE_URL: dbUrl, PF_RELEASES_DIR: dir } : {}),
+    });
 
     if (action === "create") {
       const manifestPath = args[0];

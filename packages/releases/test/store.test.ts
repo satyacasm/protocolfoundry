@@ -6,7 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { EvalRun, McpServerManifest } from "@protocolfoundry/core";
 import { ingestOpenApi } from "@protocolfoundry/discovery";
 import { generateManifest } from "@protocolfoundry/generator";
-import { FileReleaseStore, ReleaseGateError } from "../src/store.js";
+import { FileReleaseStore } from "../src/store.js";
+import { ReleaseGateError } from "../src/types.js";
 
 const SPEC_PATH = join(import.meta.dirname, "../../../examples/taskboard/openapi.json");
 

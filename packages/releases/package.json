@@ -11,6 +11,11 @@
   },
   "dependencies": {
     "@protocolfoundry/core": "*",
+    "pg": "^8.13.0",
     "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "pg-mem": "^3.0.0"
   }
 }

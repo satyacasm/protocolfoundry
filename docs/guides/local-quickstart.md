@@ -192,13 +192,20 @@ From now on, `pf release promote` / `pf release rollback myapp` change what's
 served **without restarting the gateway**. Ship v2 confidently; roll back in
 one command if agents misbehave.
 
+> **Postgres instead of files (optional):** set `$env:PF_DATABASE_URL` to any
+> Postgres connection string (Neon, Supabase, local, Docker) and every command
+> above — plus the gateway and dashboard — uses Postgres instead of the
+> `releases/` directory. The schema is created automatically. Per-command
+> override: `pf release ... --db <url>`.
+
 ## 8. Watch it in the dashboard
 
 ```powershell
-$env:PF_RELEASES_DIR = "releases"
-$env:PF_AUDIT_LOG    = "audit.log.jsonl"
+$env:PF_RELEASES_DIR        = "releases"
+$env:PF_AUDIT_LOG           = "audit.log.jsonl"
+$env:PF_DASHBOARD_PASSWORD  = "<pick an operator password>"   # omit = open mode (banner)
 npm run dev -w @protocolfoundry/web
-# -> http://localhost:3100
+# -> http://localhost:3100 (log in with the password)
 ```
 
 Projects, release timelines with eval gauges, the exact tool surface agents

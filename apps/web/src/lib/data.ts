@@ -5,18 +5,20 @@ import {
   type McpServerManifest,
   type Release,
 } from "@protocolfoundry/core";
-import { FileReleaseStore } from "@protocolfoundry/releases";
+import {
+  createReleaseStoreFromEnv,
+  describeReleaseBackend,
+} from "@protocolfoundry/releases";
 
 /**
- * Control-plane data access (read-only v1). Reads the same file release
- * store the gateway serves from, plus the gateway's JSONL audit log.
- * Postgres replaces this at the multi-user milestone (ADR-0005).
+ * Control-plane data access (read-only v1). Uses the same release backend
+ * the gateway serves from — Postgres via PF_DATABASE_URL or the file store
+ * via PF_RELEASES_DIR (ADR-0005/0006) — plus the gateway's JSONL audit log.
  */
 
-const releasesDir = process.env.PF_RELEASES_DIR ?? "releases";
 const auditLogPath = process.env.PF_AUDIT_LOG ?? "audit.log.jsonl";
 
-export const store = new FileReleaseStore(releasesDir);
+export const store = createReleaseStoreFromEnv();
 
 export interface ProjectSummary {
   projectId: string;
@@ -92,5 +94,5 @@ export async function readAuditEvents(limit = 100, kind?: string): Promise<Audit
 }
 
 export function dataSourceInfo(): { releasesDir: string; auditLogPath: string } {
-  return { releasesDir, auditLogPath };
+  return { releasesDir: describeReleaseBackend(), auditLogPath };
 }

@@ -7,6 +7,48 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 8: Postgres store + dashboard auth
+
+### Done
+
+- **`PgReleaseStore`** (ADR-0006): Postgres backend behind the same
+  `ReleaseStore` interface as the file store — `ReleaseStore` + shared
+  `assertReleaseGate` extracted to `types.ts`. One `releases` table; manifest
+  jsonb written once, status-only mutations in transactions (same
+  immutability semantics). Structural `PgPoolLike` works with `pg.Pool` and
+  pg-mem.
+- **Uniform backend selection**: `createReleaseStoreFromEnv()` —
+  `PF_DATABASE_URL` → Postgres, else `PF_RELEASES_DIR`/default file store.
+  Wired into gateway (release mode), CLI (`pf release ... --db <url>`), and
+  dashboard. `releaseManifestSource` generalized over the interface
+  (changeStamp fast-path for files, TTL reload for pg — hot rollback intact).
+- **Dashboard auth** (ADR-0006): Next middleware gating all pages on an
+  HMAC-signed 12h `pf_session` cookie; `/login` page (styled as the
+  floor-access gate) + `/api/login` (HMAC password compare) +
+  `/api/logout`; `PF_DASHBOARD_PASSWORD` env, `PF_DASHBOARD_SECRET`
+  optional signing key; open-mode banner when unset. Web Crypto only, so
+  middleware (edge) and routes share the code.
+- Verified live: unauthenticated → 307 /login; wrong password →
+  /login?error=1; correct password → session cookie → data renders, logout
+  shown, banner gone.
+- 24 tests green (3 new pg-mem tests: gate semantics, full lifecycle with
+  manifest/eval round-trip, ManifestSource hot promote).
+
+### Open questions / follow-ups
+
+- Audit events still JSONL on the gateway — move to Postgres + paginate the
+  audit viewer from SQL.
+- Dashboard v2 write paths (promote/rollback buttons, curation review) now
+  unblocked; needs CSRF-safe form actions.
+
+### Next steps
+
+1. Dashboard v2 write paths (promote/rollback from the UI).
+2. Audit → Postgres.
+3. OAuth 2.1 on the gateway; credential vault.
+
+---
+
 ## 2026-06-10 — Session 7: control-plane dashboard v1 (read-only)
 
 ### Done

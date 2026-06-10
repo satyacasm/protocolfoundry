@@ -27,26 +27,13 @@ const IndexFile = z.object({
 });
 type IndexFile = z.infer<typeof IndexFile>;
 
-/** Quality bar a release must meet when an eval gate is enforced. */
-export interface ReleaseGate {
-  minTaskCompletionRate: number;
-  minToolSelectionAccuracy: number;
-}
+import {
+  assertReleaseGate,
+  type CreateReleaseOptions,
+  type ReleaseStore,
+} from "./types.js";
 
-export interface CreateReleaseOptions {
-  /** The eval run backing this release (stored alongside the manifest). */
-  evalRun?: EvalRun;
-  /** If set, the evalRun must exist and meet the bar — or force must be true. */
-  gate?: ReleaseGate;
-  /** Human who approved the release (audit trail). */
-  approvedBy?: string;
-  /** Explicit human override of a failing/missing gate. Recorded implicitly via approvedBy. */
-  force?: boolean;
-}
-
-export class ReleaseGateError extends Error {}
-
-export class FileReleaseStore {
+export class FileReleaseStore implements ReleaseStore {
   constructor(private readonly rootDir: string) {}
 
   private projectDir(projectId: string): string {
@@ -83,6 +70,10 @@ export class FileReleaseStore {
     }
   }
 
+  async changeStamp(projectId: string): Promise<number | undefined> {
+    return this.indexMtimeMs(projectId);
+  }
+
   async listProjects(): Promise<string[]> {
     const { readdir } = await import("node:fs/promises");
     try {
@@ -106,32 +97,8 @@ export class FileReleaseStore {
     manifest: McpServerManifest,
     options: CreateReleaseOptions = {},
   ): Promise<Release> {
-    const { evalRun, gate, approvedBy, force } = options;
-
-    if (gate && !force) {
-      if (!evalRun) {
-        throw new ReleaseGateError(
-          "Release gate is set but no eval run was provided — run pf eval first, or use force with explicit approval",
-        );
-      }
-      const failures: string[] = [];
-      if (evalRun.taskCompletionRate < gate.minTaskCompletionRate) {
-        failures.push(
-          `task completion ${Math.round(evalRun.taskCompletionRate * 100)}% < required ${Math.round(gate.minTaskCompletionRate * 100)}%`,
-        );
-      }
-      if (evalRun.toolSelectionAccuracy < gate.minToolSelectionAccuracy) {
-        failures.push(
-          `tool-selection accuracy ${Math.round(evalRun.toolSelectionAccuracy * 100)}% < required ${Math.round(gate.minToolSelectionAccuracy * 100)}%`,
-        );
-      }
-      if (failures.length > 0) {
-        throw new ReleaseGateError(`Eval gate failed: ${failures.join("; ")}`);
-      }
-    }
-    if (force && !approvedBy) {
-      throw new ReleaseGateError("force requires approvedBy — gate overrides must be attributable");
-    }
+    const { evalRun, approvedBy } = options;
+    assertReleaseGate(options);
 
     const projectId = manifest.projectId;
     const index = await this.readIndex(projectId);

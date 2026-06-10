@@ -1,5 +1,5 @@
 import type { McpServerManifest } from "@protocolfoundry/core";
-import { FileReleaseStore } from "./store.js";
+import type { ReleaseStore } from "./types.js";
 
 /**
  * What the gateway consumes: serverName -> manifest. Implemented both by a
@@ -23,18 +23,18 @@ export function staticManifestSource(manifests: McpServerManifest[]): ManifestSo
 }
 
 interface CacheEntry {
-  mtimeMs: number | undefined;
+  stamp: string | number | undefined;
   manifest: McpServerManifest | undefined;
 }
 
 /**
- * Serves each project's LIVE release. Promote/rollback rewrite only the
- * project's index.json, so this source re-checks the index mtime (at most
- * once per cacheTtlMs) and reloads the manifest when it changed — releases
- * go live or roll back without a gateway restart.
+ * Serves each project's LIVE release from any ReleaseStore. At most once per
+ * cacheTtlMs it re-checks for changes — via the store's cheap changeStamp
+ * when available (file store: index mtime), otherwise by reloading — so
+ * promote/rollback take effect without a gateway restart.
  */
 export function releaseManifestSource(
-  store: FileReleaseStore,
+  store: ReleaseStore,
   cacheTtlMs = 2000,
 ): ManifestSource {
   const byProject = new Map<string, CacheEntry>();
@@ -47,11 +47,12 @@ export function releaseManifestSource(
     lastCheck = now;
     const nextNames = new Map<string, string>();
     for (const projectId of await store.listProjects()) {
-      const mtimeMs = await store.indexMtimeMs(projectId);
+      const stamp = store.changeStamp ? await store.changeStamp(projectId) : undefined;
       const cached = byProject.get(projectId);
-      if (!cached || cached.mtimeMs !== mtimeMs) {
+      const canReuse = cached && stamp !== undefined && cached.stamp === stamp;
+      if (!canReuse) {
         const live = await store.getLive(projectId);
-        byProject.set(projectId, { mtimeMs, manifest: live?.manifest });
+        byProject.set(projectId, { stamp, manifest: live?.manifest });
       }
       const manifest = byProject.get(projectId)?.manifest;
       if (manifest) nextNames.set(manifest.serverName, projectId);

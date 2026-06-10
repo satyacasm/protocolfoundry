@@ -12,4 +12,7 @@ Deployable applications (see docs/04-roadmap.md):
   (Phase 1, live). Run via `npm run dev -w @protocolfoundry/cli -- <args>`.
 - `web/` — Next.js control-plane dashboard (Phase 3, read-only v1).
   `npm run dev -w @protocolfoundry/web` → http://localhost:3100.
-  Env: `PF_RELEASES_DIR` (release store), `PF_AUDIT_LOG` (gateway audit file).
+  Env: `PF_DATABASE_URL` (Postgres) or `PF_RELEASES_DIR` (file store),
+  `PF_AUDIT_LOG` (gateway audit file), `PF_DASHBOARD_PASSWORD` (operator
+  login; open mode with a banner when unset), optional `PF_DASHBOARD_SECRET`
+  (cookie signing key, defaults to the password).

@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const authConfigured = Boolean(process.env.PF_DASHBOARD_PASSWORD);
   return (
     <html lang="en" className={`${display.variable} ${mono.variable} ${sans.variable}`}>
       <body>
@@ -37,8 +38,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav>
               <Link href="/">Overview</Link>
               <Link href="/audit">Audit log</Link>
+              {authConfigured ? (
+                <form method="post" action="/api/logout" style={{ display: "inline" }}>
+                  <button type="submit" className="logout-button">
+                    Log out
+                  </button>
+                </form>
+              ) : null}
             </nav>
           </header>
+          {!authConfigured ? (
+            <p className="open-banner">
+              OPEN MODE — set PF_DASHBOARD_PASSWORD to require operator login.
+            </p>
+          ) : null}
           {children}
         </div>
       </body>
