@@ -82,8 +82,10 @@ This is the single most important early architecture choice — it is what makes
 
 - TypeScript end-to-end; npm-workspaces monorepo.
 - `apps/web` — Next.js dashboard (also hosts control-plane API routes initially).
-- `apps/gateway` — Node service (Fastify) speaking Streamable HTTP MCP via the
-  official `@modelcontextprotocol/sdk`.
+- `apps/gateway` — Node service (Express, the SDK's documented integration)
+  speaking stateless Streamable HTTP MCP via the official
+  `@modelcontextprotocol/sdk`; one fresh Server+Transport pair per request.
+- `apps/cli` — `pf ingest` / `pf generate`, the Phase 1 CLI-first interface.
 - `packages/core` — shared domain types + validation (zod).
 - `packages/discovery` — ingestors + LLM graph analysis (Claude via Anthropic SDK).
 - `packages/generator` — graph → manifest.

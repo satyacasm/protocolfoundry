@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+    // The MCP SDK's option/transport types are not written for this flag.
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src"]
+}

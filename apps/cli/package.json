@@ -1,0 +1,19 @@
+{
+  "name": "@protocolfoundry/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pf": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@protocolfoundry/core": "*",
+    "@protocolfoundry/discovery": "*",
+    "@protocolfoundry/generator": "*"
+  }
+}

@@ -1,4 +1,7 @@
 import type { Source, WorkflowGraph } from "@protocolfoundry/core";
+import { ingestOpenApi } from "./openapi.js";
+
+export { ingestOpenApi, parseOpenApiDocument } from "./openapi.js";
 
 /**
  * Every ingestor (OpenAPI, GraphQL, Postman, HAR, walkthrough) implements this
@@ -10,12 +13,12 @@ export interface Ingestor {
   ingest(source: Source, rawContent: string, projectId: string): Promise<WorkflowGraph>;
 }
 
-/** Phase 1: OpenAPI 3.x → WorkflowGraph. Not yet implemented. */
+/** OpenAPI 3.x → WorkflowGraph. */
 export function createOpenApiIngestor(): Ingestor {
   return {
     kind: "openapi",
-    ingest() {
-      throw new Error("Not implemented — Phase 1, see docs/04-roadmap.md");
+    async ingest(source, rawContent, projectId) {
+      return ingestOpenApi(rawContent, projectId, source.id);
     },
   };
 }

@@ -19,16 +19,20 @@ then widen. Phases are scope gates, not time estimates.
 Goal: one real OpenAPI spec in → hosted, working MCP server out. Prove the engine
 before building UI around it.
 
-- [ ] `packages/discovery`: OpenAPI 3.x ingestor → WorkflowGraph
-- [ ] `packages/generator`: graph → manifest with naive 1:1 tools (baseline)
-- [ ] `apps/gateway`: manifest interpreter serving Streamable HTTP MCP
+- [x] `packages/discovery`: OpenAPI 3.x ingestor → WorkflowGraph
+- [x] `packages/generator`: graph → manifest with naive 1:1 tools (baseline);
+      destructive operations default to per-call approval gates
+- [x] `apps/gateway`: manifest interpreter serving Streamable HTTP MCP
       (official SDK), API-key auth, env-var credentials
-- [ ] Validate end-to-end with MCP Inspector + Claude against 2–3 public specs
-      (e.g. a Stripe-like spec, an internal test app)
-- [ ] Audit log of every tool call (even in MVP — it's a core differentiator)
+- [x] `apps/cli`: `pf ingest` / `pf generate` (CLI-first, per plan)
+- [x] Audit log of every tool call (JSONL, hashed args, approval denials included)
+- [x] Automated end-to-end validation: examples/taskboard spec + mock upstream,
+      real MCP client completes create→list→complete (apps/gateway/test/e2e.test.ts)
+- [ ] Validate with MCP Inspector + Claude against 2–3 real public specs
 
 **Exit criterion:** an agent completes a real multi-step task against a generated
-server we host.
+server we host. → **Met in the automated harness** (e2e test); remaining: repeat
+with Claude against a real public spec.
 
 ## Phase 2 — Curation + evals (the differentiating layer)
 

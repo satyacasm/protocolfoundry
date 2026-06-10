@@ -37,14 +37,32 @@ docs/        all project documentation
 
 ```bash
 npm install        # install workspace dependencies
-npm run typecheck  # typecheck all workspaces
-npm run build      # build all workspaces
+npm run build      # build all workspaces (dependency order)
+npm test           # build + run all tests (unit + gateway e2e)
 ```
 
 Requires Node >= 22.
 
+## Try the Phase 1 pipeline
+
+```bash
+# 1. Spec -> workflow graph
+npm run dev -w @protocolfoundry/cli -- ingest examples/taskboard/openapi.json --project taskboard -o graph.json
+
+# 2. Graph -> MCP server manifest (select all, or --select op1,op2 for curation)
+npm run dev -w @protocolfoundry/cli -- generate graph.json --name taskboard -o manifest.json
+
+# 3. Host it (agents authenticate with PF_GATEWAY_API_KEY; upstream credential
+#    comes from the env var named in the manifest's credentialBindings)
+PF_MANIFEST_PATH=manifest.json PF_GATEWAY_API_KEY=secret PF_CRED_APIKEYAUTH=<upstream-key> \
+  npm run dev -w @protocolfoundry/gateway
+# -> Streamable HTTP MCP endpoint at http://localhost:3001/mcp/taskboard
+```
+
 ## Status
 
-**Phase 0 — Foundation.** Docs, decisions, and domain types are in place; the
-Phase 1 spec-to-server pipeline is next. See [docs/04-roadmap.md](docs/04-roadmap.md)
-and the [worklog](docs/WORKLOG.md).
+**Phase 1 — spec-to-server pipeline shipped.** OpenAPI → workflow graph →
+manifest → hosted MCP server, with inbound API-key auth, approval gates on
+destructive tools, and a JSONL audit log; verified by an end-to-end test where
+a real MCP client completes a multi-step task. See
+[docs/04-roadmap.md](docs/04-roadmap.md) and the [worklog](docs/WORKLOG.md).

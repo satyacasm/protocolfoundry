@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@protocolfoundry/core": "*"
+    "@protocolfoundry/core": "*",
+    "yaml": "^2.7.0"
   }
 }

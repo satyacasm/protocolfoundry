@@ -30,6 +30,8 @@ export const Operation = z.object({
   }),
   inputSchema: JsonSchemaObject.optional(),
   outputSchema: JsonSchemaObject.optional(),
+  /** Where each input property is sent upstream (path/query/header/body). */
+  parameterLocations: z.record(z.enum(["path", "query", "header", "body"])).default({}),
   authRequirementIds: z.array(z.string()).default([]),
   /** Side-effect class drives approval-gate defaults in curation. */
   effect: z.enum(["read", "create", "update", "delete", "execute"]),
@@ -67,6 +69,8 @@ export type TaskFlow = z.infer<typeof TaskFlow>;
 export const WorkflowGraph = z.object({
   graphVersion: z.literal(1),
   projectId: z.string(),
+  /** Upstream base URLs keyed by the baseUrlRef used in Operations. */
+  baseUrls: z.record(z.string()).default({}),
   operations: z.array(Operation),
   edges: z.array(OperationEdge),
   taskFlows: z.array(TaskFlow),

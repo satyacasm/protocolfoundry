@@ -7,6 +7,57 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 2: ProtocolFoundry naming + Phase 1 pipeline
+
+### Done
+
+- Named the product: **ProtocolFoundry** — "Foundry for AI protocols, MCP
+  servers, and agent tooling." Renamed packages to `@protocolfoundry/*`.
+- Fixed a broken git situation: a stray `.git` existed at `C:\` (drive root),
+  which made `git add` scan the whole disk. Initialized a proper repo in the
+  project directory instead. Foundation committed as the root commit.
+- Extended core schemas so manifests are fully self-contained for the gateway
+  (ADR-0003): `UpstreamOperation`/`upstreamOperations`, `authSchemes`,
+  `parameterLocations`; `WorkflowGraph.baseUrls`.
+- **Phase 1 pipeline shipped end-to-end:**
+  - `packages/discovery` — OpenAPI 3.x ingestor (JSON + YAML, local $ref
+    resolution with cycle guard, security schemes → auth requirements,
+    param locations, effect classification from HTTP method).
+  - `packages/generator` — naive 1:1 manifest generation with snake_case tool
+    names, identity arg bindings, per-call approval gates on delete operations,
+    env-vault credential bindings.
+  - `apps/gateway` — Express + official MCP SDK, stateless Streamable HTTP,
+    one endpoint per manifest at `/mcp/<serverName>`, inbound API-key auth,
+    upstream credential injection (apiKey/bearer/basic), JSONL audit log with
+    hashed args, approval-gate enforcement.
+  - `apps/cli` — `pf ingest`, `pf generate`.
+  - `examples/taskboard` — demo spec + API-key-protected mock upstream.
+- Tests: 8 passing (discovery + generator unit, gateway e2e with a real MCP
+  client: authorized multi-step task, 401 for missing/wrong key, approval gate
+  blocks delete, audit log integrity). **Phase 1 exit criterion met** in the
+  automated harness.
+
+### Decisions
+
+- Gateway uses Express (the MCP SDK's documented integration) instead of the
+  originally-noted Fastify — architecture doc updated.
+- Gateway tsconfig disables `exactOptionalPropertyTypes` only — the SDK's types
+  aren't written for it.
+
+### Open questions
+
+- Domain registration for ProtocolFoundry.
+- Stray `C:\.git` still exists on the machine (outside this project) — owner
+  should remove it manually to avoid future tooling confusion.
+
+### Next steps
+
+1. Validate against 2–3 real public OpenAPI specs with MCP Inspector / Claude.
+2. Start Phase 2: LLM curation pass (task-level tools) + eval harness skeleton.
+3. Design-partner conversations (Phase 0 item, still open).
+
+---
+
 ## 2026-06-10 — Session 1: idea refinement + project setup
 
 ### Done

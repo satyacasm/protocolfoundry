@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { JsonSchemaObject } from "./workflow-graph.js";
+import { AuthRequirement, JsonSchemaObject } from "./workflow-graph.js";
 
 /**
  * The McpServerManifest is the Generator's output artifact: a declarative,
@@ -7,6 +7,21 @@ import { JsonSchemaObject } from "./workflow-graph.js";
  * multi-tenant gateway (ADR-0003). It must stay fully serializable and
  * human-reviewable — it is the artifact customers approve.
  */
+
+/**
+ * Upstream HTTP operation embedded in the manifest so the gateway never needs
+ * the workflow graph at runtime — the manifest is fully self-contained.
+ */
+export const UpstreamOperation = z.object({
+  method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]),
+  /** Path template, e.g. /v1/invoices/{id} */
+  pathTemplate: z.string(),
+  baseUrlRef: z.string().default("default"),
+  authRequirementIds: z.array(z.string()).default([]),
+  /** Where each bound input is sent (defaults: path params from template, rest query/body). */
+  parameterLocations: z.record(z.enum(["path", "query", "header", "body"])).default({}),
+});
+export type UpstreamOperation = z.infer<typeof UpstreamOperation>;
 
 /** One upstream HTTP call inside a tool's execution plan. */
 export const UpstreamCall = z.object({
@@ -66,6 +81,10 @@ export const McpServerManifest = z.object({
   serverDescription: z.string(),
   /** Upstream base URLs keyed by baseUrlRef used in Operations. */
   baseUrls: z.record(z.string().url()),
+  /** Operations referenced by tool plans, keyed by operationId. */
+  upstreamOperations: z.record(UpstreamOperation),
+  /** Auth schemes referenced by operations, keyed by authRequirementId. */
+  authSchemes: z.record(AuthRequirement).default({}),
   tools: z.array(ToolDefinition),
   resources: z.array(ResourceDefinition).default([]),
   prompts: z.array(PromptDefinition).default([]),
