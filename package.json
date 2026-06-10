@@ -2,6 +2,7 @@
   "name": "protocolfoundry",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "description": "Managed platform that turns authorized applications into eval-tested, hosted MCP servers",
   "workspaces": [
     "apps/*",

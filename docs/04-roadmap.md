@@ -28,7 +28,10 @@ before building UI around it.
 - [x] Audit log of every tool call (JSONL, hashed args, approval denials included)
 - [x] Automated end-to-end validation: examples/taskboard spec + mock upstream,
       real MCP client completes create→list→complete (apps/gateway/test/e2e.test.ts)
-- [ ] Validate with MCP Inspector + Claude against 2–3 real public specs
+- [x] Validate against real public specs programmatically — Petstore (JSON,
+      19 ops; their demo server was down upstream) + Open-Meteo (YAML, live
+      data end-to-end). Findings: docs/validation/2026-06-10-public-specs.md
+- [ ] Interactive pass with MCP Inspector + Claude (needs a human at the browser)
 
 **Exit criterion:** an agent completes a real multi-step task against a generated
 server we host. → **Met in the automated harness** (e2e test); remaining: repeat

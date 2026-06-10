@@ -7,6 +7,36 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 3: public-spec validation (Petstore + Open-Meteo)
+
+### Done
+
+- Ran the pipeline against two real public specs; full report in
+  `docs/validation/2026-06-10-public-specs.md`.
+- **Open-Meteo (YAML): complete end-to-end success** — live weather data
+  through the hosted MCP endpoint. Exercised: YAML parsing, missing
+  operationId fallback, missing servers guard, multi-manifest hosting.
+- **Petstore (JSON, 19 ops):** ingest/curation/hosting/approval-gate all
+  correct; their public demo server is returning 500s to everyone, so upstream
+  calls couldn't complete (verified independent of our stack).
+- Added `scripts/mcp-call.ts` (generic endpoint exerciser) and
+  `scripts/validate-petstore.ts`; root package.json gained `"type": "module"`.
+
+### Backlog from findings
+
+1. `loadManifests` should skip/clearly report non-manifest JSON files.
+2. OpenAPI query-param `style`/`explode` serialization (arrays work by luck).
+3. Tool names + descriptions need the Phase 2 curation pass (confirmed
+   empirically — marketing blurbs and `get_v1_forecast`-style names).
+4. Curation UX needs search/grouping for big specs before GitHub-scale (~900 ops).
+
+### Next steps
+
+1. User: interactive MCP Inspector + Claude pass (commands in the validation doc).
+2. Phase 2 kickoff: LLM curation pass + eval harness.
+
+---
+
 ## 2026-06-10 — Session 2: ProtocolFoundry naming + Phase 1 pipeline
 
 ### Done
