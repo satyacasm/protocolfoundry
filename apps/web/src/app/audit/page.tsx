@@ -12,14 +12,23 @@ const KINDS = [
   "credentialConnected",
 ] as const;
 
+const PAGE_SIZE = 50;
+
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{ kind?: string; page?: string }>;
 }) {
-  const { kind } = await searchParams;
-  const events = await readAuditEvents(200, kind);
+  const { kind, page: pageRaw } = await searchParams;
+  const page = Math.max(1, Number(pageRaw) || 1);
+  const events = await readAuditEvents({
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+    ...(kind ? { kind } : {}),
+  });
   const { auditLogPath } = dataSourceInfo();
+  const pageUrl = (p: number) =>
+    `/audit?${kind ? `kind=${kind}&` : ""}page=${p}`;
 
   return (
     <main className="reveal">
@@ -41,7 +50,11 @@ export default async function AuditPage({
         ))}
       </div>
 
-      <SectionHead no="01" title="Events" meta={auditLogPath} />
+      <SectionHead
+        no="01"
+        title="Events"
+        meta={`${auditLogPath} · page ${page}`}
+      />
       {events.length === 0 ? (
         <div className="empty">
           No events{kind ? ` of kind ${kind}` : ""}. Point PF_AUDIT_LOG at the gateway&apos;s
@@ -99,6 +112,10 @@ export default async function AuditPage({
           </tbody>
         </table>
       )}
+      <div className="filters" style={{ marginTop: 20 }}>
+        {page > 1 ? <Link href={pageUrl(page - 1)}>← newer</Link> : null}
+        {events.length === PAGE_SIZE ? <Link href={pageUrl(page + 1)}>older →</Link> : null}
+      </div>
     </main>
   );
 }

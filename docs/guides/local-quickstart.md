@@ -195,7 +195,8 @@ one command if agents misbehave.
 > **Postgres instead of files (optional):** set `$env:PF_DATABASE_URL` to any
 > Postgres connection string (Neon, Supabase, local, Docker) and every command
 > above — plus the gateway and dashboard — uses Postgres instead of the
-> `releases/` directory. The schema is created automatically. Per-command
+> `releases/` directory, **including audit events** (an `audit_events` table
+> replaces the JSONL file). Schemas are created automatically. Per-command
 > override: `pf release ... --db <url>`.
 
 ## 8. Watch it in the dashboard

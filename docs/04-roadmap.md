@@ -86,8 +86,11 @@ the large-spec campaign.
 - [x] Dashboard v2a — promote/rollback from the UI: server actions gated by
       operator session (refused in open mode), success/error flashes,
       `releasePromoted`/`releaseRolledBack` audit events with user actor.
+- [x] Audit events into Postgres (`@protocolfoundry/audit`): JSONL + Postgres
+      backends behind one `AuditStore` interface, selected by `PF_DATABASE_URL`;
+      gateway and dashboard write through it; audit viewer paginates with
+      kind/project filters.
 - [ ] Dashboard v2b: curation review UI, source upload
-- [ ] Audit events into Postgres (viewer paginating from SQL)
 - [ ] Credential vault (KMS-encrypted), per-tool scopes
 - [ ] OAuth 2.1 authorization on the gateway (MCP auth spec)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME

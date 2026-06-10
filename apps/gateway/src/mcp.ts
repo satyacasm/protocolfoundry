@@ -5,10 +5,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { McpServerManifest } from "@protocolfoundry/core";
 import { executePlan, envCredentialResolver, type CredentialResolver } from "./executor.js";
-import type { AuditLog } from "./audit.js";
+import type { AuditSink } from "./audit.js";
 
 export interface McpServerDeps {
-  audit: AuditLog;
+  audit: AuditSink;
   resolveCredential?: CredentialResolver;
   /** Per-call approval gates need a human channel (Phase 3); until then this flag. */
   approveAll?: boolean;

@@ -1,11 +1,9 @@
 "use server";
 
-import { appendFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { AuditEvent } from "@protocolfoundry/core";
-import { dataSourceInfo, store } from "./data";
+import { auditStore, store } from "./data";
 import { SESSION_COOKIE, sessionSecret, verifySessionToken } from "./session";
 
 /**
@@ -33,16 +31,12 @@ async function appendAudit(
   detail: Record<string, unknown>,
   actorId: string,
 ): Promise<void> {
-  const event: AuditEvent = {
-    id: randomUUID(),
-    tenantId: "local",
+  await auditStore.record({
     projectId,
     kind,
     actor: { type: "user", id: actorId },
     detail,
-    occurredAt: new Date().toISOString(),
-  };
-  await appendFile(dataSourceInfo().auditLogPath, `${JSON.stringify(event)}\n`, "utf8");
+  });
 }
 
 function backToProject(projectId: string, notice: string, isError = false): never {

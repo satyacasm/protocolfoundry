@@ -1,24 +1,27 @@
-import { readFile } from "node:fs/promises";
 import {
-  AuditEvent,
+  type AuditEvent,
   type EvalRun,
   type McpServerManifest,
   type Release,
 } from "@protocolfoundry/core";
+import {
+  createAuditStoreFromEnv,
+  describeAuditBackend,
+  type AuditQuery,
+} from "@protocolfoundry/audit";
 import {
   createReleaseStoreFromEnv,
   describeReleaseBackend,
 } from "@protocolfoundry/releases";
 
 /**
- * Control-plane data access (read-only v1). Uses the same release backend
- * the gateway serves from — Postgres via PF_DATABASE_URL or the file store
- * via PF_RELEASES_DIR (ADR-0005/0006) — plus the gateway's JSONL audit log.
+ * Control-plane data access. Uses the same backends the gateway uses —
+ * Postgres via PF_DATABASE_URL, or the file store (PF_RELEASES_DIR) and
+ * JSONL audit log (PF_AUDIT_LOG) — see ADR-0005/0006.
  */
 
-const auditLogPath = process.env.PF_AUDIT_LOG ?? "audit.log.jsonl";
-
 export const store = createReleaseStoreFromEnv();
+export const auditStore = createAuditStoreFromEnv();
 
 export interface ProjectSummary {
   projectId: string;
@@ -71,28 +74,17 @@ export async function getReleaseDetail(
   };
 }
 
-export async function readAuditEvents(limit = 100, kind?: string): Promise<AuditEvent[]> {
-  let raw: string;
-  try {
-    raw = await readFile(auditLogPath, "utf8");
-  } catch {
-    return [];
-  }
-  const events: AuditEvent[] = [];
-  for (const line of raw.trim().split("\n").reverse()) {
-    if (!line) continue;
-    try {
-      const event = AuditEvent.parse(JSON.parse(line));
-      if (kind && event.kind !== kind) continue;
-      events.push(event);
-      if (events.length >= limit) break;
-    } catch {
-      // skip malformed lines rather than break the viewer
-    }
-  }
-  return events;
+export async function readAuditEvents(
+  limitOrQuery: number | AuditQuery = 100,
+  kind?: string,
+): Promise<AuditEvent[]> {
+  const query: AuditQuery =
+    typeof limitOrQuery === "number"
+      ? { limit: limitOrQuery, ...(kind ? { kind } : {}) }
+      : limitOrQuery;
+  return auditStore.query(query);
 }
 
 export function dataSourceInfo(): { releasesDir: string; auditLogPath: string } {
-  return { releasesDir: describeReleaseBackend(), auditLogPath };
+  return { releasesDir: describeReleaseBackend(), auditLogPath: describeAuditBackend() };
 }

@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@protocolfoundry/audit": "*",
     "@protocolfoundry/core": "*",
     "@protocolfoundry/releases": "*",
     "next": "^15.3.0",

@@ -1,6 +1,7 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { McpServerManifest } from "@protocolfoundry/core";
+import { createAuditStoreFromEnv } from "@protocolfoundry/audit";
 import {
   createReleaseStoreFromEnv,
   describeReleaseBackend,
@@ -69,7 +70,7 @@ if (isMain) {
     process.exit(1);
   }
   const port = Number(process.env.PF_PORT ?? 3001);
-  const audit = new AuditLog(process.env.PF_AUDIT_LOG ?? "audit.log.jsonl");
+  const audit = createAuditStoreFromEnv();
   const options = {
     audit,
     ...(process.env.PF_GATEWAY_API_KEY ? { apiKey: process.env.PF_GATEWAY_API_KEY } : {}),

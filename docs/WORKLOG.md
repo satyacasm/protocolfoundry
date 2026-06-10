@@ -7,6 +7,36 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 10: audit events → Postgres + paginated viewer
+
+### Done
+
+- **`@protocolfoundry/audit`**: `AuditStore` interface (record + paginated
+  query, newest-first, kind/project filters, hashed args) with two backends —
+  `JsonlAuditStore` (same line format as the Phase 1 log, existing files keep
+  working) and `PgAuditStore` (append-only `audit_events` table, no UPDATE
+  path). `createAuditStoreFromEnv()`: `PF_DATABASE_URL` → Postgres, else
+  `PF_AUDIT_LOG` JSONL — same convention as releases.
+- **Gateway** writes through the store (`AuditLog` kept as a back-compat
+  alias for the JSONL backend; `McpServerDeps.audit` is now the `AuditSink`
+  interface). **Dashboard** reads via `auditStore.query` and its
+  promote/rollback actions record through the same store — fixing the gap
+  where dashboard audit writes were JSONL-only even when releases used pg.
+- **Audit viewer pagination**: 50/page with older/newer links that preserve
+  the kind filter; verified live (single-page log correctly shows no links).
+- 28 tests green — 4 new, running the same behavioral suite against BOTH
+  audit backends (ordering, filters, no-overlap pagination, no raw args
+  stored).
+
+### Next steps
+
+1. Dashboard v2b: curation review UI, source upload.
+2. OAuth 2.1 on the gateway; credential vault.
+3. Large-spec eval campaign (Shiprocket collection waiting in
+   examples/shiprocket — needs the Phase 4 Postman ingestor or a converter).
+
+---
+
 ## 2026-06-10 — Session 9: dashboard write paths (promote/rollback from the UI)
 
 ### Done
