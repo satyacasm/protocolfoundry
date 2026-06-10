@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { applyCuration, createAnthropicCurator, proposeCuration } from "@protocolfoundry/curation";
-import { ingestOpenApi } from "@protocolfoundry/discovery";
+import { ingestSource } from "@protocolfoundry/discovery";
 import { generateManifest, type GenerateOptions } from "@protocolfoundry/generator";
 import { store } from "./data";
 import { appendAudit, requireOperator } from "./operator";
@@ -54,7 +54,7 @@ export async function ingestSpec(formData: FormData): Promise<void> {
       throw new Error("Provide a spec file or a spec URL");
     }
 
-    const graph = ingestOpenApi(raw, projectId, sourceId);
+    const graph = ingestSource(raw, projectId, sourceId);
     if (graph.operations.length === 0) throw new Error("Spec contains no operations");
     await saveGraph(graph);
   } catch (error) {

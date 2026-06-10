@@ -7,6 +7,40 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 13: native Postman ingestor + Shiprocket conversion
+
+### Done
+
+- **`ingestPostman`** (packages/discovery) + **`ingestSource`**
+  auto-detection (Postman v2.1 vs OpenAPI) wired into `pf ingest` and the
+  Forge. Mapping built defensively for real-world collections:
+  - input schemas **inferred from example request bodies** (typed, depth-capped);
+    query params, `:param` / unresolved-`{{var}}` path params; formdata keys
+  - auth: explicit per-request types; `noauth` opts out; "inherit" falls back
+    to the collection's **dominant explicit scheme** (documented heuristic)
+  - multi-host → multiple baseUrls with per-operation refs; folders → tags;
+    output schemas from 2xx example responses; collection variables substituted
+- **Shiprocket converted**: 92/92 requests ingested (bearer auth detected,
+  both hosts mapped, 3 noauth login ops); 7-tool core shipping manifest
+  generated; hosted with scoped tokens. `create_custom_order` got 40+ typed
+  args from the example body. Verified live: read token listed tools and was
+  **scope-blocked** on the write tool; the read call reached the real
+  `apiv2.shiprocket.in` and surfaced Shiprocket's own 401 for the dummy
+  credential — full pipeline proven; a real token in the vault makes it live.
+- `examples/shiprocket/README.md` — end-to-end walkthrough + honest
+  limitations (no required-field info in Postman, formdata caveat).
+- 41 tests green (3 new: fixture mapping incl. variable-resolution bug found
+  by test, inferSchema depth cap, real-collection assertions).
+
+### Next steps
+
+1. Eval Shiprocket with a real account token (user) — large-spec eval
+   campaign continues.
+2. Eval runs from the dashboard (job runner).
+3. Metering/billing, drift detection, design partners.
+
+---
+
 ## 2026-06-10 — Session 12: scoped tokens + encrypted credential vault (ADR-0007)
 
 ### Done

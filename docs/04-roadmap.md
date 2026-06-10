@@ -112,7 +112,13 @@ the large-spec campaign.
 
 ## Phase 4 — Wider ingestion + analytics
 
-- [ ] GraphQL, Postman, HAR-recording ingestors; docs crawler
+- [x] Postman Collection v2.1 ingestor (auto-detected by `pf ingest` and the
+      Forge): example-body schema inference, dominant-auth heuristic for
+      "inherit", multi-host baseUrls, folder tags, `{{var}}`/`:param`
+      handling. Validated on Shiprocket's official 92-request collection
+      (examples/shiprocket/README.md) — hosted server verified with scoped
+      tokens against the real upstream.
+- [ ] GraphQL, HAR-recording ingestors; docs crawler
 - [ ] Guided walkthrough capture (user demonstrates a workflow; platform records
       authorized network traffic) — replaces the original idea's risky autonomous
       UI discovery with consented recording

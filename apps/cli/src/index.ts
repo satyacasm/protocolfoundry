@@ -10,7 +10,7 @@ import {
   createAnthropicCurator,
   proposeCuration,
 } from "@protocolfoundry/curation";
-import { ingestOpenApi } from "@protocolfoundry/discovery";
+import { ingestSource } from "@protocolfoundry/discovery";
 import {
   createAnthropicAgent,
   renderEvalReport,
@@ -22,8 +22,9 @@ import { generateManifest } from "@protocolfoundry/generator";
 const USAGE = `ProtocolFoundry CLI — spec-to-server pipeline
 
 Usage:
-  pf ingest <openapi-file> --project <id> [-o <graph.json>]
-      Ingest an OpenAPI 3.x spec (JSON or YAML) into a workflow graph.
+  pf ingest <spec-file> --project <id> [-o <graph.json>]
+      Ingest an OpenAPI 3.x spec (JSON/YAML) or a Postman Collection v2.1
+      (auto-detected) into a workflow graph.
 
   pf generate <graph.json> [--name <serverName>] [--select <op1,op2,...>]
               [--base-url <url>] [-o <manifest.json>]
@@ -112,7 +113,7 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     const raw = await readFile(specPath, "utf8");
-    const graph = ingestOpenApi(raw, projectId, `openapi:${specPath}`);
+    const graph = ingestSource(raw, projectId, `spec:${specPath}`);
     const outPath = flags.get("-o") ?? "graph.json";
     await writeFile(outPath, JSON.stringify(graph, null, 2), "utf8");
     console.log(`Ingested ${graph.operations.length} operation(s) -> ${outPath}`);
