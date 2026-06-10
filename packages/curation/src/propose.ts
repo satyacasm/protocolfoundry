@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import {
   ComposedToolProposal,
@@ -19,6 +18,77 @@ const RawProposal = z.object({
   warnings: z.array(ExposureWarning),
 });
 export type RawProposal = z.infer<typeof RawProposal>;
+
+/**
+ * Hand-written JSON schema for the structured output. The SDK's
+ * zodOutputFormat helper requires zod v4 while this workspace (and the MCP
+ * SDK) are on v3, so we declare the wire schema directly and re-validate the
+ * parsed result with the canonical v3 RawProposal.
+ */
+const obj = (
+  properties: Record<string, unknown>,
+  required: string[],
+): Record<string, unknown> => ({
+  type: "object",
+  additionalProperties: false,
+  properties,
+  required,
+});
+const str = { type: "string" } as const;
+
+const RAW_PROPOSAL_JSON_SCHEMA = obj(
+  {
+    refinements: {
+      type: "array",
+      items: obj({ operationId: str, toolName: str, description: str }, [
+        "operationId",
+        "toolName",
+        "description",
+      ]),
+    },
+    composedTools: {
+      type: "array",
+      items: obj(
+        {
+          name: str,
+          description: str,
+          arguments: {
+            type: "array",
+            items: obj(
+              {
+                name: str,
+                type: { type: "string", enum: ["string", "number", "integer", "boolean"] },
+                description: str,
+                required: { type: "boolean" },
+              },
+              ["name", "type", "description", "required"],
+            ),
+          },
+          steps: {
+            type: "array",
+            items: obj(
+              {
+                operationId: str,
+                bindings: {
+                  type: "array",
+                  items: obj({ arg: str, expression: str }, ["arg", "expression"]),
+                },
+              },
+              ["operationId", "bindings"],
+            ),
+          },
+          rationale: str,
+        },
+        ["name", "description", "arguments", "steps", "rationale"],
+      ),
+    },
+    warnings: {
+      type: "array",
+      items: obj({ operationId: str, reason: str }, ["operationId", "reason"]),
+    },
+  },
+  ["refinements", "composedTools", "warnings"],
+);
 
 /**
  * Pluggable LLM boundary so tests (and offline use) can inject a fake.
@@ -75,7 +145,7 @@ Produce:
 
 1. "refinements" — for EVERY operation above: a snake_case toolName an agent will instantly understand (verb_noun, no API jargon like version prefixes), and a rewritten description that states what the tool does AND when an agent should call it, in one or two sentences. Do not copy marketing text.
 
-2. "composedTools" — task-level tools for common multi-step business tasks a user would ask an agent to do that span 2+ operations (e.g. "create X and send it"). For each: snake_case name, description, the user-facing arguments, and sequential steps. Step bindings map an upstream argument to either "$args.<argName>" (a tool argument), "$steps[<n>].output.<field>" (a field from an earlier step's response, 0-indexed), or a literal string. Only compose flows that are genuinely useful; an empty list is acceptable.
+2. "composedTools" — task-level tools for common multi-step business tasks a user would ask an agent to do that span 2+ operations (e.g. "create X and send it"). For each: snake_case name, description, the user-facing arguments, and sequential steps. Step bindings map an upstream argument to either "$args.<argName>" (a tool argument), "$steps[<n>].output.<field>" (a field from an earlier step's response, 0-indexed), or a literal string. The description MUST state the trigger prescriptively so agents reliably prefer it over chaining the underlying tools, e.g. "Call this whenever the user asks to <task> in one request — use it INSTEAD of calling <tool_a> then <tool_b> separately." Name the tool after the business task outcome, not the mechanism. Only compose flows that are genuinely useful; an empty list is acceptable.
 
 3. "warnings" — operations whose exposure to agents deserves human scrutiny (destructive, bulk, billing, or auth-sensitive), with the reason.
 
@@ -91,17 +161,26 @@ export function createAnthropicCurator(model = "claude-opus-4-8"): Curator {
   return {
     model,
     async propose(prompt: string): Promise<RawProposal> {
-      const response = await client.messages.parse({
+      const response = await client.messages.create({
         model,
         max_tokens: 16000,
         thinking: { type: "adaptive" },
         messages: [{ role: "user", content: prompt }],
-        output_config: { format: zodOutputFormat(RawProposal) },
+        output_config: {
+          format: { type: "json_schema", schema: RAW_PROPOSAL_JSON_SCHEMA },
+        },
       });
-      if (!response.parsed_output) {
-        throw new Error("Curation model returned no parseable proposal");
+      const text = response.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
+        .join("");
+      if (!text) {
+        throw new Error(
+          `Curation model returned no output (stop_reason: ${response.stop_reason})`,
+        );
       }
-      return response.parsed_output;
+      // Validate against the canonical schema (defense in depth).
+      return RawProposal.parse(JSON.parse(text));
     },
   };
 }

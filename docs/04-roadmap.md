@@ -52,13 +52,18 @@ with Claude against a real public spec.
       compositions with destructive steps inherit the approval gate.
 - [ ] Release model (immutable, eval-gated, roll-backable) — deferred to
       Phase 3 alongside the database (see ADR-0004 consequences).
-- [ ] **Live exit-criterion run**: curated vs naive on the same suite with a
-      real agent model (requires ANTHROPIC_API_KEY; harness + comparison
-      report are ready — see examples/taskboard/eval-suite.json).
+- [x] **Live exit-criterion run** with `claude-opus-4-8`
+      (docs/validation/2026-06-10-phase2-live-evals.md): composed tool = 2
+      steps vs 3 and ~18% fewer input tokens when adopted; curated
+      descriptions added description-level safety. Completion tied at 100% —
+      a 5-op API can't differentiate completion; the headline gap needs a
+      large/messy spec.
+- [ ] Large-spec eval campaign (Petstore 19 ops when their demo recovers,
+      then GitHub-scale) — the completion-rate marketing number.
 
 **Exit criterion:** curated server measurably beats the naive baseline on the same
-task suite — this number is the marketing. Harness verified with scripted
-agents; the live number needs an API key.
+task suite. Measured live on steps/tokens/safety; completion-rate gap pending
+the large-spec campaign.
 
 ## Phase 3 — Product (dashboard + hosting business)
 

@@ -7,6 +7,41 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 5: live Phase 2 validation (real Claude curation + evals)
+
+### Done
+
+- Ran the full Phase 2 loop live with `claude-opus-4-8` (user provided an API
+  key; **key was pasted in chat — rotate it**). Full findings:
+  `docs/validation/2026-06-10-phase2-live-evals.md`.
+- Curation: valid proposal first try (5 refinements, 1 composed tool with
+  correct step bindings, deleteTask warning). Human review caught and fixed a
+  misleading composed-tool name before apply — the ADR-0004 workflow working
+  as designed.
+- Evals: naive vs curated side by side. Composed tool, when adopted: 2 steps
+  vs 3, ~18% fewer input tokens. Both manifests: 100% completion (5-op API is
+  too easy for completion to differentiate — need Petstore/GitHub scale next).
+- Two real findings from the harness: curated descriptions produce
+  description-level safety (agent refused delete before the gateway gate),
+  and composed-tool adoption flakes without prescriptive trigger descriptions.
+- Fixes landed: curation prompt now requires "use INSTEAD of A then B" trigger
+  descriptions; eval suite made outcome-based; `zodOutputFormat` (zod v4-only)
+  replaced with a hand-written JSON schema for structured outputs;
+  `scripts/compare-evals.ts` + `scripts/run-taskboard-upstream.ts` added.
+
+### Open questions
+
+- Demonstrate the completion-rate gap on a large API (Petstore re-test when
+  their demo recovers; then a GitHub-scale spec) — the marketing number.
+- Evals backlog: upstream state-reset hook between runs.
+
+### Next steps
+
+1. Phase 3 kickoff: release store + DB (eval-gated releases), then dashboard.
+2. Large-spec eval campaign for the headline number.
+
+---
+
 ## 2026-06-10 — Session 4: Phase 2 — LLM curation + agent-usability evals
 
 ### Done
