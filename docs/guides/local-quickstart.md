@@ -243,6 +243,11 @@ see, full eval reports, and the audit log with approval-gate events.
 > Requires `PF_DASHBOARD_PASSWORD` (writes are disabled in open mode) and,
 > for the curation button, `ANTHROPIC_API_KEY` on the dashboard server.
 
+Releases that carry an eval also get a **public report** link — an
+HMAC-signed `/reports/<project>/<version>?sig=…` URL you can paste into docs
+or a changelog. Anyone with the link sees the scores, task results, and
+governance facts; nobody can guess links for releases you didn't share.
+
 Every release page also offers a **connection bundle** (`.zip`) download:
 the manifest, ready-to-paste client configs (Claude Code, Claude Desktop,
 Cursor), `pf token issue` instructions, and the eval report. No credentials

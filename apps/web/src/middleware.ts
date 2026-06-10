@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, sessionSecret, verifySessionToken } from "@/lib/session";
 
-const PUBLIC_PATHS = [/^\/login$/, /^\/api\/login$/];
+// /reports/* is signature-gated by the page itself (shareable eval reports)
+const PUBLIC_PATHS = [/^\/login$/, /^\/api\/login$/, /^\/reports\//];
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const secret = sessionSecret();

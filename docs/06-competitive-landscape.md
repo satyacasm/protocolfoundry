@@ -62,6 +62,8 @@ auth, scopes, audit, drift, maintenance.
    per-release "agent-readiness report" (completion %, tool-selection %, token
    cost vs naive baseline) the vendor can link from their docs/changelog.
    Nobody in the table above can publish such a number today.
+   *Shipped 2026-06-11*: signed public `/reports/<project>/<version>` links
+   from every release page.
 2. **Eval-gated immutable releases as the trust story** — "CI/CD for MCP."
    Promote/rollback + audit + forced-override attribution is an enterprise
    narrative none of the codegen tools and few of the platforms can tell.

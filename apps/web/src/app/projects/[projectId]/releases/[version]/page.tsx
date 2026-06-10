@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getReleaseDetail } from "@/lib/data";
+import { reportPath } from "@/lib/report-sign";
 import { formatWhen, Gauge, SectionHead, StatusBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,11 @@ export default async function ReleasePage({
         >
           ↓ connection bundle (.zip)
         </a>
+        {evalRun ? (
+          <a className="action-button" href={reportPath(projectId, release.version)} target="_blank">
+            ⇗ public report (shareable link)
+          </a>
+        ) : null}
       </p>
 
       <section className="section" style={{ marginTop: 0 }}>

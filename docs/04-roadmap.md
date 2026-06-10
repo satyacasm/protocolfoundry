@@ -108,6 +108,11 @@ the large-spec campaign.
       download (manifest, client configs, token instructions, eval report —
       never credentials, never source; ADR-0003 intact) and `.zip` spec
       uploads in the Forge.
+- [x] **Public agent-readiness reports** (competitive move #1,
+      docs/06-competitive-landscape.md): HMAC-signed shareable
+      `/reports/<project>/<version>` links from the release page — scores,
+      task table, governance facts; no login needed, unforgeable, 404 on
+      bad signatures, signatures never expire.
 - [ ] Full OAuth 2.1 authorization-code flow via external AS (deferred —
       ADR-0007; metadata endpoint already advertises authorization servers).
       **Raised priority**: competitive survey (docs/06-competitive-landscape.md)

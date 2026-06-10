@@ -7,6 +7,37 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 15: public agent-readiness reports (signed share links)
+
+### Done
+
+- **Public eval reports** — competitive move #1 from
+  docs/06-competitive-landscape.md, shipped: every release with an eval run
+  gets a "public report (shareable link)" button on its release page →
+  `/reports/<project>/<version>?sig=<hmac>`. The page renders without a
+  session (middleware allows `/reports/*`; the signature is the gate):
+  headline completion/tool-selection scores, per-task results, tool-surface
+  shape, governance facts (immutable releases, scopes, audit, approval
+  gates), "measured, not promised" framing.
+- **`lib/report-sign.ts`**: HMAC-SHA256 over `report:<project>:<version>`
+  with `PF_DASHBOARD_SECRET ?? PF_DASHBOARD_PASSWORD` (32-hex-char sig,
+  timing-safe compare). Signatures never expire — links published in vendor
+  docs must keep working. Open mode (no password) needs no signature.
+  Bad/missing sig and missing release/eval are an indistinguishable 404.
+- Verified live on the prod build: anonymous fetch with valid sig → 200 with
+  scores; missing sig → 404; forged sig → 404; link correctly rendered on
+  the release page. 49 tests green (4 new sign/verify tests).
+- Quickstart + roadmap + competitive doc updated.
+
+### Next steps
+
+1. Naive-vs-curated comparison on the public report (the marketing delta)
+   once the large-spec eval campaign lands.
+2. OAuth 2.1 external-AS flow (raised priority per competitive survey).
+3. Eval runs from the dashboard (job runner); Shiprocket real-token eval.
+
+---
+
 ## 2026-06-11 — Session 14: competitive landscape, dashboard motion pass, zip bundles
 
 ### Done
