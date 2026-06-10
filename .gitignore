@@ -2,7 +2,10 @@ node_modules/
 dist/
 .next/
 workspace/
-releases/
+# root-anchored: bare "releases/" would also ignore route segments like
+# apps/web/src/app/api/projects/[projectId]/releases/
+/releases/
+apps/web/releases/
 audit.log.jsonl
 *.tsbuildinfo
 .env

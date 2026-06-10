@@ -7,6 +7,59 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 14: competitive landscape, dashboard motion pass, zip bundles
+
+### Done
+
+- **`docs/06-competitive-landscape.md`**: market map (June 2026) across four
+  archetypes — spec-to-server platforms (Speakeasy Gram, Stainless, Tyk AI
+  Studio, MCP.link, openapi-mcp-generator family), connector catalogs
+  (Composio/Zapier/Pipedream/Klavis), registries (Smithery/Glama), DIY.
+  Strategic moves: public eval-readiness reports, eval-gated releases as the
+  trust story, Postman/beyond-OpenAPI ingestion as wedge-widener, connection
+  bundles not source bundles, agent analytics, registry partnerships.
+  **OAuth 2.1 gap raised in priority** (most-cited managed-platform feature we
+  lack); roadmap + strategy doc + CLAUDE.md cross-linked.
+- **Dashboard motion pass** (CSS-first, `prefers-reduced-motion` safe): rising
+  ember particles, gauge fills sweeping to value with hot tip, count-up stats
+  (`CountUp` client component), section-underline draws, card sheen/lift +
+  furnace-edge flicker on live cards, nav underline draws, button sheen/press,
+  staggered table rows, timeline live-dot ping, flash slide-ins.
+- **Connection bundles (.zip)**: release page → `GET /api/projects/<id>/
+  releases/<v>/bundle` streams a zip with README (endpoint, `pf token issue`
+  instructions, tool/scope/gate table), manifest.json, release.json, client
+  configs (Claude Code `.mcp.json`, Claude Desktop via mcp-remote, Cursor),
+  eval-report.json when present. **No credentials, no source** (ADR-0003).
+  `PF_PUBLIC_GATEWAY_URL` controls the advertised endpoint origin.
+- **Zip spec upload in the Forge**: `.zip` accepted (extension or PK magic);
+  json/yaml entries tried shallowest-first until one ingests as
+  OpenAPI/Postman; provenance `upload:<zip>!<entry>`; `__MACOSX`/dotfiles
+  skipped. Verified live by no-JS form replay: login → multipart zip post →
+  303 to curate, graph carries the zip-entry sourceId.
+- **`.gitignore` bug**: bare `releases/` ignored the new route directory
+  (`.../releases/[version]/bundle/`) — root-anchored to `/releases/`,
+  `/workspace/`; the route file was silently untracked before the fix.
+- Route handlers that read live stores need `export const dynamic =
+  "force-dynamic"` — Next statically optimized the bundle GET and cached a
+  500 from build context.
+- Tests: 45 green (4 new in `apps/web/test/bundle.test.ts`); typecheck +
+  prod build clean; bundle download (200/zip + 404 path) and zip upload
+  verified against the prod server.
+
+### Open questions
+
+- Dev-harness browser tools were broken this session — the animated UI is
+  build-verified but not eyeballed; worth a quick human look at
+  `npm run dev -w @protocolfoundry/web`.
+
+### Next steps
+
+1. Public shareable eval-readiness report (competitive move #1).
+2. OAuth 2.1 external-AS flow (raised priority per competitive survey).
+3. Eval runs from the dashboard (job runner); Shiprocket real-token eval.
+
+---
+
 ## 2026-06-10 — Session 13: native Postman ingestor + Shiprocket conversion
 
 ### Done

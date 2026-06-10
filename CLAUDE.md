@@ -11,6 +11,7 @@ product detail.**
 
 - Product idea & strategy: `docs/01-vision.md`, `docs/02-product-strategy.md`
 - System design: `docs/03-architecture.md`
+- Competitor map & differentiation moves: `docs/06-competitive-landscape.md`
 - What to build next: `docs/04-roadmap.md` (currently **Phase 0 → Phase 1**)
 - Security/trust rules: `docs/05-security-model.md`
 - Decisions already made: `docs/decisions/ADR-*.md` — don't relitigate these

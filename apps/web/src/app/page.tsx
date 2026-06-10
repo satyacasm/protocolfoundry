@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { dataSourceInfo, getProjects, readAuditEvents } from "@/lib/data";
 import { formatWhen, Gauge, SectionHead, StatusBadge } from "@/components/ui";
+import { CountUp } from "@/components/count-up";
 
 export const dynamic = "force-dynamic";
 
@@ -22,21 +23,29 @@ export default async function OverviewPage() {
 
       <div className="stats">
         <div className="stat">
-          <div className="value">{projects.length}</div>
+          <div className="value">
+            <CountUp value={projects.length} />
+          </div>
           <div className="label">Projects</div>
         </div>
         <div className="stat">
           <div className="value">
-            <em>{liveCount}</em>
+            <em>
+              <CountUp value={liveCount} />
+            </em>
           </div>
           <div className="label">Live servers</div>
         </div>
         <div className="stat">
-          <div className="value">{allReleases.length}</div>
+          <div className="value">
+            <CountUp value={allReleases.length} />
+          </div>
           <div className="label">Releases cut</div>
         </div>
         <div className="stat">
-          <div className="value">{invocations.length}</div>
+          <div className="value">
+            <CountUp value={invocations.length} duration={1300} />
+          </div>
           <div className="label">Tool calls audited</div>
         </div>
       </div>

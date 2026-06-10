@@ -19,9 +19,9 @@ export default async function ForgePage({
       <p className="eyebrow">Forge</p>
       <h1>New project</h1>
       <p className="lede">
-        Feed the foundry an OpenAPI 3.x spec (JSON or YAML) for an application
-        you own. You&apos;ll review every operation before anything is exposed
-        to agents.
+        Feed the foundry an OpenAPI 3.x spec or Postman collection (JSON, YAML,
+        or a .zip containing one) for an application you own. You&apos;ll review
+        every operation before anything is exposed to agents.
       </p>
 
       {notice ? <p className="flash ok-flash">{notice}</p> : null}
@@ -58,7 +58,7 @@ export default async function ForgePage({
           <label className="gate-label" htmlFor="specFile">
             …or upload a spec file
           </label>
-          <input id="specFile" name="specFile" type="file" className="gate-input" accept=".json,.yaml,.yml" />
+          <input id="specFile" name="specFile" type="file" className="gate-input" accept=".json,.yaml,.yml,.zip" />
           <button type="submit" className="gate-button" disabled={!writesEnabled}>
             Ingest
           </button>

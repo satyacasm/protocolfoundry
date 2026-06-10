@@ -19,6 +19,19 @@ const sans = IBM_Plex_Sans({
   variable: "--next-font-sans",
 });
 
+/* fixed field so server render is deterministic — sparks drift up the whole viewport */
+const emberField = [
+  { x: 8, size: 2, dur: 19, delay: 0 },
+  { x: 21, size: 3, dur: 14, delay: 4 },
+  { x: 34, size: 2, dur: 22, delay: 9 },
+  { x: 47, size: 2, dur: 16, delay: 2 },
+  { x: 58, size: 3, dur: 20, delay: 12 },
+  { x: 69, size: 2, dur: 15, delay: 6 },
+  { x: 81, size: 3, dur: 18, delay: 1 },
+  { x: 90, size: 2, dur: 23, delay: 14 },
+  { x: 96, size: 2, dur: 17, delay: 8 },
+];
+
 export const metadata: Metadata = {
   title: "ProtocolFoundry — Control Plane",
   description: "Eval-tested, hosted MCP servers: releases, evals, audit.",
@@ -29,6 +42,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${mono.variable} ${sans.variable}`}>
       <body>
+        <div className="embers" aria-hidden>
+          {emberField.map((ember, i) => (
+            <span
+              key={i}
+              style={
+                {
+                  "--x": `${ember.x}%`,
+                  "--size": `${ember.size}px`,
+                  "--dur": `${ember.dur}s`,
+                  "--delay": `${ember.delay}s`,
+                } as React.CSSProperties
+              }
+            />
+          ))}
+        </div>
         <div className="shell">
           <header className="masthead">
             <Link href="/" className="wordmark">

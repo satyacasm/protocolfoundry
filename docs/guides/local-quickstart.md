@@ -235,11 +235,20 @@ Projects, release timelines with eval gauges, the exact tool surface agents
 see, full eval reports, and the audit log with approval-gate events.
 
 > **Prefer clicking to typing?** The dashboard's **Forge** page covers steps
-> 1–3 in the browser: upload the spec (or paste its URL), review/check the
-> operations, optionally run LLM curation and approve its proposals item by
-> item, and stage the release — then promote it from the project page.
+> 1–3 in the browser: upload the spec (or paste its URL — `.json`, `.yaml`,
+> or a `.zip` containing one; OpenAPI and Postman collections are
+> auto-detected), review/check the operations, optionally run LLM curation
+> and approve its proposals item by item, and stage the release — then
+> promote it from the project page.
 > Requires `PF_DASHBOARD_PASSWORD` (writes are disabled in open mode) and,
 > for the curation button, `ANTHROPIC_API_KEY` on the dashboard server.
+
+Every release page also offers a **connection bundle** (`.zip`) download:
+the manifest, ready-to-paste client configs (Claude Code, Claude Desktop,
+Cursor), `pf token issue` instructions, and the eval report. No credentials
+are ever included. Set `$env:PF_PUBLIC_GATEWAY_URL` on the dashboard server
+so the bundle's endpoint URLs point at your gateway (defaults to
+`http://localhost:3001`).
 
 ## Troubleshooting
 

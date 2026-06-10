@@ -26,6 +26,9 @@ services (they also own the apps, so the same trust story applies).
 
 ## Competitive landscape and positioning
 
+> Detailed, current market map (players, archetypes, strategic moves):
+> [06-competitive-landscape.md](06-competitive-landscape.md). Summary below.
+
 - **Composio / Zapier MCP / Pipedream** — catalogs of pre-built connectors for
   segment B. They sell breadth of *other people's* apps. We sell depth on *your*
   app. Not head-on competitors for the vendor wedge.

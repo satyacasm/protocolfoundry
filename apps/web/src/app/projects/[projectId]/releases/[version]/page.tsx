@@ -31,6 +31,13 @@ export default async function ReleasePage({
         {release.approvedBy ? (
           <span className="chip warn">gate overridden by {release.approvedBy}</span>
         ) : null}
+        <a
+          className="action-button"
+          href={`/api/projects/${projectId}/releases/${release.version}/bundle`}
+          download
+        >
+          ↓ connection bundle (.zip)
+        </a>
       </p>
 
       <section className="section" style={{ marginTop: 0 }}>

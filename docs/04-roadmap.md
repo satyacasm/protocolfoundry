@@ -103,8 +103,15 @@ the large-spec campaign.
       read/write/destructive by effect; `pf token issue` mints expiring,
       server-bound, scope-carrying tokens; gateway enforces per tool call;
       RFC 9728 metadata + WWW-Authenticate on 401.
+- [x] Dashboard v2c — motion design pass (precision-foundry animations,
+      reduced-motion safe) + **connection bundles**: per-release `.zip`
+      download (manifest, client configs, token instructions, eval report —
+      never credentials, never source; ADR-0003 intact) and `.zip` spec
+      uploads in the Forge.
 - [ ] Full OAuth 2.1 authorization-code flow via external AS (deferred —
-      ADR-0007; metadata endpoint already advertises authorization servers)
+      ADR-0007; metadata endpoint already advertises authorization servers).
+      **Raised priority**: competitive survey (docs/06-competitive-landscape.md)
+      found managed OAuth is the #1 hosted-platform selling point we lack.
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME
 - [ ] Drift detection: re-ingest spec on schedule, diff the graph, flag breaking
       changes, propose regeneration

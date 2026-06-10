@@ -74,6 +74,37 @@ a {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 28px 96px;
+  position: relative;
+  z-index: 1;
+}
+
+/* rising ember particles behind the content */
+.embers {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.embers span {
+  position: absolute;
+  bottom: -10px;
+  left: var(--x, 50%);
+  width: var(--size, 3px);
+  height: var(--size, 3px);
+  border-radius: 50%;
+  background: var(--ember);
+  box-shadow: 0 0 8px var(--ember-glow), 0 0 3px var(--ember);
+  opacity: 0;
+  animation: ember-rise var(--dur, 16s) linear var(--delay, 0s) infinite;
+}
+
+@keyframes ember-rise {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  6% { opacity: 0.5; }
+  50% { opacity: 0.22; transform: translate(18px, -55vh) scale(0.8); }
+  100% { transform: translate(-14px, -108vh) scale(0.4); opacity: 0; }
 }
 
 .masthead {
@@ -112,8 +143,35 @@ a {
   color: var(--text-dim);
 }
 
+.masthead nav a {
+  position: relative;
+}
+
+.masthead nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -5px;
+  height: 1px;
+  background: var(--ember);
+  transition: right 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
 .masthead nav a:hover {
   color: var(--ember-soft);
+}
+
+.masthead nav a:hover::after {
+  right: 0;
+}
+
+.wordmark em {
+  transition: text-shadow 200ms ease;
+}
+
+.wordmark:hover em {
+  text-shadow: 0 0 14px rgba(255, 122, 31, 0.55);
 }
 
 .crumbs {
@@ -165,6 +223,25 @@ h1 {
   border-bottom: 1px solid var(--line);
   padding-bottom: 10px;
   margin-bottom: 22px;
+  position: relative;
+}
+
+/* ember underline draws in from the left */
+.section-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--ember), rgba(255, 122, 31, 0.25) 45%, transparent 75%);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: draw-line 900ms 250ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+@keyframes draw-line {
+  to { transform: scaleX(1); }
 }
 
 .section-head .no {
@@ -219,12 +296,37 @@ h1 {
   border-right: none;
 }
 
+.stat {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat::after {
+  /* faint heat shimmer along the bottom of each instrument cell */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 122, 31, 0.5), transparent);
+  background-size: 200% 100%;
+  animation: heat-sweep 5s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes heat-sweep {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
 .stat .value {
   font-family: var(--font-display);
   font-size: 42px;
   font-weight: 600;
   line-height: 1;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .stat .value em {
@@ -255,12 +357,32 @@ h1 {
   background: var(--bg-raised);
   padding: 22px 22px 18px;
   position: relative;
-  transition: border-color 160ms ease, transform 160ms ease;
+  overflow: hidden;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 200ms ease;
 }
 
 .project-card:hover {
   border-color: var(--ember-dim, #b35413);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 122, 31, 0.07);
+}
+
+/* sheen sweep across the card face */
+.project-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -65%;
+  width: 38%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.045), transparent);
+  transform: skewX(-14deg);
+  transition: left 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+
+.project-card:hover::after {
+  left: 130%;
 }
 
 .project-card::before {
@@ -277,6 +399,12 @@ h1 {
 .project-card.is-live::before {
   background: linear-gradient(180deg, var(--ember), var(--ember-glow));
   box-shadow: 0 0 14px var(--ember-glow);
+  animation: furnace 3.2s ease-in-out infinite;
+}
+
+@keyframes furnace {
+  0%, 100% { box-shadow: 0 0 12px var(--ember-glow); opacity: 1; }
+  50% { box-shadow: 0 0 22px rgba(255, 122, 31, 0.4); opacity: 0.82; }
 }
 
 .project-card h3 {
@@ -409,10 +537,34 @@ h1 {
 .gauge .fill {
   height: 100%;
   background: linear-gradient(90deg, #b35413, var(--ember));
+  position: relative;
+  /* sweep from zero to the inline width on load */
+  animation: gauge-fill 950ms 150ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.gauge .fill::after {
+  /* hot tip */
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ember-soft);
+  box-shadow: 0 0 8px var(--ember);
 }
 
 .gauge .fill.low {
   background: linear-gradient(90deg, #7c2d2d, var(--bad));
+}
+
+.gauge .fill.low::after {
+  background: var(--bad);
+  box-shadow: 0 0 8px var(--bad);
+}
+
+@keyframes gauge-fill {
+  from { width: 0; }
 }
 
 .gauge .gval {
@@ -447,8 +599,20 @@ table.grid td {
 }
 
 table.grid tr:hover td {
-  background: rgba(255, 255, 255, 0.018);
+  background: rgba(255, 122, 31, 0.035);
 }
+
+/* staggered row entrance (first rows only; the rest land together) */
+.reveal table.grid tbody tr {
+  animation: rise 380ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.reveal table.grid tbody tr:nth-child(1) { animation-delay: 50ms; }
+.reveal table.grid tbody tr:nth-child(2) { animation-delay: 100ms; }
+.reveal table.grid tbody tr:nth-child(3) { animation-delay: 150ms; }
+.reveal table.grid tbody tr:nth-child(4) { animation-delay: 200ms; }
+.reveal table.grid tbody tr:nth-child(5) { animation-delay: 250ms; }
+.reveal table.grid tbody tr:nth-child(6) { animation-delay: 300ms; }
 
 td.desc {
   font-family: var(--font-sans);
@@ -502,6 +666,21 @@ td.desc {
 .release-row.live::before {
   border-color: var(--ember);
   box-shadow: 0 0 10px var(--ember-glow);
+  animation: ping 2.6s ease-out infinite;
+}
+
+@keyframes ping {
+  0% { box-shadow: 0 0 0 0 rgba(255, 122, 31, 0.45); }
+  70% { box-shadow: 0 0 0 9px rgba(255, 122, 31, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 122, 31, 0); }
+}
+
+.release-row:hover {
+  transform: translateX(3px);
+}
+
+.release-row {
+  transition: border-color 160ms ease, transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .release-row .row-head {
@@ -643,6 +822,7 @@ input[type="checkbox"] {
 }
 
 .action-button {
+  display: inline-block;
   font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.14em;
@@ -652,11 +832,16 @@ input[type="checkbox"] {
   background: rgba(255, 122, 31, 0.1);
   border: 1px solid rgba(255, 122, 31, 0.5);
   color: var(--ember-soft);
-  transition: background 140ms ease;
+  transition: background 140ms ease, box-shadow 140ms ease, transform 100ms ease;
 }
 
 .action-button:hover {
   background: rgba(255, 122, 31, 0.22);
+  box-shadow: 0 0 12px rgba(255, 122, 31, 0.18);
+}
+
+.action-button:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 .action-button.danger {
@@ -675,6 +860,12 @@ input[type="checkbox"] {
   padding: 9px 14px;
   margin: 0 0 22px;
   border: 1px solid var(--line-bright);
+  animation: flash-in 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes flash-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
 }
 
 .ok-flash {
@@ -740,11 +931,41 @@ input[type="checkbox"] {
   border: none;
   padding: 12px;
   cursor: pointer;
-  transition: filter 140ms ease;
+  position: relative;
+  overflow: hidden;
+  transition: filter 140ms ease, box-shadow 160ms ease, transform 100ms ease;
+}
+
+.gate-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-110%);
+  pointer-events: none;
 }
 
 .gate-button:hover {
   filter: brightness(1.12);
+  box-shadow: 0 0 22px rgba(255, 122, 31, 0.35);
+}
+
+.gate-button:hover::after {
+  animation: sheen 800ms ease;
+}
+
+.gate-button:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.gate-button:disabled {
+  filter: saturate(0.25) brightness(0.7);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@keyframes sheen {
+  to { transform: translateX(110%); }
 }
 
 .gate-error {
@@ -793,4 +1014,19 @@ input[type="checkbox"] {
 @keyframes rise {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
+}
+
+/* accessibility: kill all motion when the user asks for it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .embers {
+    display: none;
+  }
 }

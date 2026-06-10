@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { applyCuration, createAnthropicCurator, proposeCuration } from "@protocolfoundry/curation";
 import { ingestSource } from "@protocolfoundry/discovery";
 import { generateManifest, type GenerateOptions } from "@protocolfoundry/generator";
+import { extractSpecCandidates, looksLikeZip } from "./bundle";
 import { store } from "./data";
 import { appendAudit, requireOperator } from "./operator";
 import { getGraph, getProposal, saveGraph, saveProposal } from "./workspace";
@@ -43,8 +44,38 @@ export async function ingestSpec(formData: FormData): Promise<void> {
     let raw: string | undefined;
     let sourceId: string;
     if (file instanceof File && file.size > 0) {
-      raw = await file.text();
-      sourceId = `upload:${file.name}`;
+      const bytes = await file.arrayBuffer();
+      if (looksLikeZip(file.name, new Uint8Array(bytes.slice(0, 4)))) {
+        // zip upload: try each json/yaml entry until one ingests as a spec
+        const candidates = await extractSpecCandidates(bytes);
+        if (candidates.length === 0) {
+          throw new Error("Zip contains no .json/.yaml/.yml spec files");
+        }
+        let winner: { name: string; text: string } | undefined;
+        let lastError: unknown;
+        for (const candidate of candidates) {
+          try {
+            const probe = ingestSource(candidate.text, projectId, `upload:${file.name}!${candidate.name}`);
+            if (probe.operations.length === 0) throw new Error("Spec contains no operations");
+            winner = candidate;
+            break;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        if (!winner) {
+          throw new Error(
+            `No entry in the zip ingested as OpenAPI or Postman (last error: ${
+              lastError instanceof Error ? lastError.message : String(lastError)
+            })`,
+          );
+        }
+        raw = winner.text;
+        sourceId = `upload:${file.name}!${winner.name}`;
+      } else {
+        raw = new TextDecoder().decode(bytes);
+        sourceId = `upload:${file.name}`;
+      }
     } else if (specUrl) {
       const response = await fetch(specUrl, { headers: { Accept: "application/json, text/yaml" } });
       if (!response.ok) throw new Error(`Fetching spec failed: HTTP ${response.status}`);
