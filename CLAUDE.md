@@ -16,6 +16,8 @@ product detail.**
 - Decisions already made: `docs/decisions/ADR-*.md` — don't relitigate these
   without writing a superseding ADR
 - Session log: `docs/WORKLOG.md`
+- End-user walkthrough (URL → hosted MCP server): `docs/guides/local-quickstart.md`
+  — keep it in sync when CLI commands or env vars change
 
 ## Working conventions (follow these every session)
 

@@ -14,6 +14,7 @@ credential vault, audit logs, drift detection, instant rollback).
 
 | Doc | What's in it |
 |---|---|
+| [docs/guides/local-quickstart.md](docs/guides/local-quickstart.md) | **Start here:** URL → hosted MCP server, step by step on your machine |
 | [docs/01-vision.md](docs/01-vision.md) | Problem, product, moat, long-term vision |
 | [docs/02-product-strategy.md](docs/02-product-strategy.md) | Buyer, wedge, competition, pricing, risk register |
 | [docs/03-architecture.md](docs/03-architecture.md) | Control plane / data plane design, core entities |
