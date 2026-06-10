@@ -7,6 +7,41 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 12: scoped tokens + encrypted credential vault (ADR-0007)
+
+### Done
+
+- **`@protocolfoundry/vault`**: AES-256-GCM encrypted-at-rest credentials
+  (`PF_VAULT_KEY` master key via `pf keygen`); file + Postgres backends;
+  `pf vault set/list/rm`. Fails closed on wrong key; nothing readable on
+  disk; list never exposes secrets.
+- **Gateway credential resolution is now async + vault-aware**:
+  `vault:<id>` refs, and `env:<NAME>` falls back env→vault so secrets can
+  move into the vault with zero manifest changes.
+- **Scoped bearer tokens** (`pf token issue --server X --scopes read,write
+  --days 30`, secret `PF_GATEWAY_TOKEN_SECRET`): HMAC-signed, expiring,
+  server-bound. Static API key stays as full-access mode.
+- **Per-tool scope enforcement**: generator assigns requiredScopes by effect
+  (read/write/destructive); composed tools take the union of step scopes;
+  gateway rejects out-of-scope calls with an audited `insufficient_scope`.
+- **MCP-auth resource-server shape**: RFC 9728 metadata at
+  `/.well-known/oauth-protected-resource/mcp/<server>` (scopes from the live
+  manifest, `PF_AUTH_SERVER_URL` advertised); 401s carry `WWW-Authenticate`
+  with the metadata URL. Full code-flow AS deferred (ADR-0007).
+- 38 tests green (10 new): vault behaviors on both backends + encryption
+  fail-closed; e2e read-token reads via vault credential / blocked on write,
+  write-token writes, expired/wrong-server/garbage all 401 with
+  WWW-Authenticate, metadata content.
+
+### Next steps
+
+1. Shiprocket decision (Postman ingestor vs converter) + large-spec evals.
+2. Eval runs from the dashboard (job runner).
+3. Remaining Phase 3: usage metering/billing, drift detection, design
+   partners; external-AS OAuth when multi-tenant.
+
+---
+
 ## 2026-06-10 — Session 11: the Forge — curation review UI + source upload
 
 ### Done

@@ -14,6 +14,11 @@ export interface McpServerDeps {
   approveAll?: boolean;
 }
 
+/** What the caller's credential grants. Static API key / open mode = "all". */
+export interface AuthContext {
+  scopes: string[] | "all";
+}
+
 /**
  * Build an MCP server for one manifest. Called once per request in stateless
  * Streamable HTTP mode, so instances must be cheap and hold no session state.
@@ -21,6 +26,7 @@ export interface McpServerDeps {
 export function createMcpServerForManifest(
   manifest: McpServerManifest,
   deps: McpServerDeps,
+  auth: AuthContext = { scopes: "all" },
 ): Server {
   const resolveCredential = deps.resolveCredential ?? envCredentialResolver;
   const server = new Server(
@@ -53,6 +59,27 @@ export function createMcpServerForManifest(
         content: [{ type: "text", text: `Unknown tool "${toolName}"` }],
         isError: true,
       };
+    }
+
+    if (auth.scopes !== "all") {
+      const missing = tool.requiredScopes.filter((s) => !(auth.scopes as string[]).includes(s));
+      if (missing.length > 0) {
+        await deps.audit.record({
+          projectId: manifest.projectId,
+          kind: "toolInvocation",
+          actor,
+          detail: { ...baseDetail, ok: false, error: `insufficient_scope: needs ${missing.join(", ")}` },
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Insufficient scope: tool "${toolName}" requires [${tool.requiredScopes.join(", ")}] but this token grants [${(auth.scopes as string[]).join(", ")}]. The operation was NOT executed.`,
+            },
+          ],
+          isError: true,
+        };
+      }
     }
 
     if (tool.approval === "perCall" && !deps.approveAll) {

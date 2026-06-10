@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
 import { CurationProposal, EvalRun, McpServerManifest, WorkflowGraph } from "@protocolfoundry/core";
+import { randomBytes } from "node:crypto";
+import { issueToken } from "@protocolfoundry/gateway";
 import { createReleaseStoreFromEnv, ReleaseGateError } from "@protocolfoundry/releases";
+import { createVaultFromEnv } from "@protocolfoundry/vault";
 import {
   applyCuration,
   createAnthropicCurator,
@@ -58,6 +61,20 @@ Usage:
       Instantly revert to the previous live release.
 
   pf release list <projectId> [--dir <releases-dir>]
+
+  pf keygen
+      Generate a 32-byte base64 secret (for PF_VAULT_KEY,
+      PF_GATEWAY_TOKEN_SECRET, or PF_DASHBOARD_SECRET).
+
+  pf vault set <id> --secret <value> | pf vault list | pf vault rm <id>
+      Encrypted credential vault (AES-256-GCM). Requires PF_VAULT_KEY;
+      backend follows PF_DATABASE_URL / PF_VAULT_PATH. The gateway resolves
+      manifest credential refs against it (env first, then vault).
+
+  pf token issue --server <name|*> [--scopes read,write,destructive]
+                 [--days 30]
+      Mint a scoped gateway access token (pft_...). Requires
+      PF_GATEWAY_TOKEN_SECRET. Scopes are enforced per tool.
 
 Serve live releases with the gateway (hot promote/rollback):
   PF_RELEASES_DIR=releases npm run dev -w @protocolfoundry/gateway
@@ -328,6 +345,78 @@ async function main(): Promise<void> {
 
     console.error(USAGE);
     process.exit(1);
+  }
+
+  if (command === "keygen") {
+    console.log(randomBytes(32).toString("base64"));
+    return;
+  }
+
+  if (command === "vault") {
+    const vault = createVaultFromEnv();
+    if (!vault) {
+      console.error("PF_VAULT_KEY is not set — generate one with: pf keygen");
+      process.exit(1);
+    }
+    const [action, id] = positional;
+    if (action === "set") {
+      const secret = flags.get("--secret");
+      if (!id || !secret) {
+        console.error("Usage: pf vault set <id> --secret <value>");
+        process.exit(1);
+      }
+      await vault.set(id, secret);
+      console.log(`Stored "${id}" (encrypted). Reference it in manifests as vault:${id}`);
+      console.log(`(env:${id} bindings also resolve to it when the env var is absent.)`);
+      return;
+    }
+    if (action === "list") {
+      const entries = await vault.list();
+      if (entries.length === 0) console.log("Vault is empty.");
+      for (const entry of entries) console.log(`  ${entry.id}  ${entry.createdAt}`);
+      return;
+    }
+    if (action === "rm") {
+      if (!id) {
+        console.error("Usage: pf vault rm <id>");
+        process.exit(1);
+      }
+      console.log((await vault.remove(id)) ? `Removed "${id}"` : `No credential "${id}"`);
+      return;
+    }
+    console.error(USAGE);
+    process.exit(1);
+  }
+
+  if (command === "token") {
+    const [action] = positional;
+    if (action !== "issue") {
+      console.error(USAGE);
+      process.exit(1);
+    }
+    const secret = process.env.PF_GATEWAY_TOKEN_SECRET;
+    const server = flags.get("--server");
+    if (!secret || !server) {
+      console.error(
+        "Usage: PF_GATEWAY_TOKEN_SECRET=<pf keygen output> pf token issue --server <name|*> [--scopes read,write] [--days 30]",
+      );
+      process.exit(1);
+    }
+    const scopes = (flags.get("--scopes") ?? "read")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const days = Number(flags.get("--days") ?? 30);
+    const token = issueToken(secret, {
+      server,
+      scopes,
+      ttlMs: days * 24 * 60 * 60 * 1000,
+    });
+    console.log(token);
+    console.error(
+      `# server=${server} scopes=[${scopes.join(", ")}] expires in ${days}d — send as Authorization: Bearer <token>`,
+    );
+    return;
   }
 
   console.error(USAGE);

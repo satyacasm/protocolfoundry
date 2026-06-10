@@ -2,6 +2,8 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { McpServerManifest } from "@protocolfoundry/core";
 import { createAuditStoreFromEnv } from "@protocolfoundry/audit";
+import { createVaultFromEnv } from "@protocolfoundry/vault";
+import { createCredentialResolver } from "./credentials.js";
 import {
   createReleaseStoreFromEnv,
   describeReleaseBackend,
@@ -13,8 +15,10 @@ import { AuditLog } from "./audit.js";
 
 export { createGatewayApp, type GatewayOptions } from "./app.js";
 export { AuditLog } from "./audit.js";
+export { createCredentialResolver } from "./credentials.js";
 export { executePlan, resolveBinding, envCredentialResolver } from "./executor.js";
-export { createMcpServerForManifest } from "./mcp.js";
+export { createMcpServerForManifest, type AuthContext } from "./mcp.js";
+export { issueToken, verifyToken, type TokenClaims } from "./tokens.js";
 
 /**
  * Load and validate one manifest file or every *.json in a directory.
@@ -71,9 +75,18 @@ if (isMain) {
   }
   const port = Number(process.env.PF_PORT ?? 3001);
   const audit = createAuditStoreFromEnv();
+  const vault = createVaultFromEnv();
+  if (vault) console.log("[gateway] credential vault enabled (PF_VAULT_KEY)");
   const options = {
     audit,
+    resolveCredential: createCredentialResolver(vault),
     ...(process.env.PF_GATEWAY_API_KEY ? { apiKey: process.env.PF_GATEWAY_API_KEY } : {}),
+    ...(process.env.PF_GATEWAY_TOKEN_SECRET
+      ? { tokenSecret: process.env.PF_GATEWAY_TOKEN_SECRET }
+      : {}),
+    ...(process.env.PF_AUTH_SERVER_URL
+      ? { authorizationServers: [process.env.PF_AUTH_SERVER_URL] }
+      : {}),
     approveAll: process.env.PF_APPROVE_ALL === "true",
   };
 

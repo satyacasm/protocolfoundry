@@ -18,8 +18,13 @@ export interface PlanResult {
   upstreamCalls: UpstreamCallRecord[];
 }
 
-/** Resolves `env:VAR_NAME` vault references. Real KMS vault arrives in Phase 3. */
-export type CredentialResolver = (vaultCredentialId: string) => string | undefined;
+/**
+ * Resolves credential references (`env:VAR`, `vault:id`). May be async —
+ * the gateway's resolver consults the encrypted vault.
+ */
+export type CredentialResolver = (
+  vaultCredentialId: string,
+) => string | undefined | Promise<string | undefined>;
 
 export function envCredentialResolver(vaultCredentialId: string): string | undefined {
   if (!vaultCredentialId.startsWith("env:")) return undefined;
@@ -80,12 +85,12 @@ function applyAuth(
   }
 }
 
-function buildRequest(
+async function buildRequest(
   manifest: McpServerManifest,
   op: UpstreamOperation,
   boundArgs: Record<string, unknown>,
   resolveCredential: CredentialResolver,
-): { url: string; init: RequestInit } {
+): Promise<{ url: string; init: RequestInit }> {
   const baseUrl = manifest.baseUrls[op.baseUrlRef];
   if (!baseUrl) throw new Error(`Manifest has no base URL for ref "${op.baseUrlRef}"`);
 
@@ -127,7 +132,7 @@ function buildRequest(
     if (!scheme) throw new Error(`Manifest has no auth scheme "${authId}"`);
     const binding = manifest.credentialBindings.find((b) => b.authRequirementId === authId);
     if (!binding) throw new Error(`No credential bound for auth scheme "${authId}"`);
-    const secret = resolveCredential(binding.vaultCredentialId);
+    const secret = await resolveCredential(binding.vaultCredentialId);
     if (!secret) {
       throw new Error(
         `Credential "${binding.vaultCredentialId}" is not configured on the gateway`,
@@ -177,7 +182,7 @@ export async function executePlan(
       boundArgs[name] = resolveBinding(expr, { args, steps });
     }
 
-    const { url, init } = buildRequest(manifest, op, boundArgs, resolveCredential);
+    const { url, init } = await buildRequest(manifest, op, boundArgs, resolveCredential);
     const startedAt = Date.now();
     const response = await fetch(url, init);
     const text = await response.text();

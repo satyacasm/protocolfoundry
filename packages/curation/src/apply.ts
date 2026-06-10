@@ -7,6 +7,7 @@ import {
 import {
   generateManifest,
   sanitizeToolName,
+  scopesForEffect,
   type GenerateOptions,
 } from "@protocolfoundry/generator";
 
@@ -123,7 +124,8 @@ export function applyCuration(
         operationId: step.operationId,
         inputBindings: Object.fromEntries(step.bindings.map((b) => [b.arg, b.expression])),
       })),
-      requiredScopes: [],
+      // Composed tools need every scope their steps touch.
+      requiredScopes: [...new Set(stepOps.flatMap((op) => scopesForEffect(op.effect)))],
       // Destructive steps keep their gate even inside compositions.
       approval: stepOps.some((op) => op.effect === "delete") ? "perCall" : "none",
     };

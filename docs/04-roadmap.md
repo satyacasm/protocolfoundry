@@ -96,8 +96,15 @@ the large-spec campaign.
       curated release. Operator-gated; artifacts in a file workspace
       (`PF_WORKSPACE_DIR`, Postgres with multi-tenant); audit
       `manifestChange` events for every forge mutation.
-- [ ] Credential vault (KMS-encrypted), per-tool scopes
-- [ ] OAuth 2.1 authorization on the gateway (MCP auth spec)
+- [x] Credential vault (`@protocolfoundry/vault`, ADR-0007): AES-256-GCM at
+      rest, file/Postgres backends, `pf vault` CLI, env→vault fallback so no
+      manifest changes are needed. KMS key-wrapping at managed hosting.
+- [x] Per-tool scopes + scoped bearer tokens (ADR-0007): generator assigns
+      read/write/destructive by effect; `pf token issue` mints expiring,
+      server-bound, scope-carrying tokens; gateway enforces per tool call;
+      RFC 9728 metadata + WWW-Authenticate on 401.
+- [ ] Full OAuth 2.1 authorization-code flow via external AS (deferred —
+      ADR-0007; metadata endpoint already advertises authorization servers)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME
 - [ ] Drift detection: re-ingest spec on schedule, diff the graph, flag breaking
       changes, propose regeneration

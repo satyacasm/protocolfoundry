@@ -129,6 +129,28 @@ Notes:
 - `$env:PF_APPROVE_ALL = "true"` lets gated (destructive) tools execute; leave
   it unset to keep them blocked.
 
+> **Encrypted vault instead of env vars (recommended):**
+>
+> ```powershell
+> $env:PF_VAULT_KEY = (npm run -s dev -w @protocolfoundry/cli -- keygen)
+> npm run dev -w @protocolfoundry/cli -- vault set PF_CRED_APIKEYAUTH --secret "<your real key>"
+> ```
+>
+> Start the gateway with the same `PF_VAULT_KEY` and drop the plaintext env
+> var — `env:` bindings fall back to the vault automatically. Keep the key
+> safe; secrets are AES-256-GCM sealed on disk (or in Postgres).
+>
+> **Least-privilege agent tokens instead of the master API key:**
+>
+> ```powershell
+> $env:PF_GATEWAY_TOKEN_SECRET = (npm run -s dev -w @protocolfoundry/cli -- keygen)
+> npm run dev -w @protocolfoundry/cli -- token issue --server myapp --scopes read --days 30
+> ```
+>
+> Give that `pft_...` token to the agent as its Bearer credential: it can call
+> read tools but gets "Insufficient scope" on write/destructive ones
+> (scopes are assigned per tool from the operation's effect).
+
 ## 5. Point an agent at it
 
 **Claude Code:**

@@ -52,6 +52,16 @@ function describe(op: Operation): string {
 }
 
 /**
+ * Default scope per effect class — enforced by the gateway against the
+ * caller's token scopes (`pf token issue --scopes read,write,destructive`).
+ */
+export function scopesForEffect(effect: Operation["effect"]): string[] {
+  if (effect === "read") return ["read"];
+  if (effect === "delete") return ["destructive"];
+  return ["write"];
+}
+
+/**
  * Phase 1 baseline: naive 1:1 generation — each selected operation becomes one
  * tool whose plan is a single upstream call with identity argument bindings.
  * Destructive operations default to a per-call approval gate.
@@ -104,7 +114,7 @@ export function generateManifest(
       inputSchema,
       ...(op.outputSchema ? { outputSchema: op.outputSchema } : {}),
       plan: [{ operationId: op.id, inputBindings }],
-      requiredScopes: [],
+      requiredScopes: scopesForEffect(op.effect),
       approval: op.effect === "delete" ? "perCall" : "none",
     });
 
