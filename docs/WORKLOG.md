@@ -7,6 +7,42 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 6: Phase 3 kickoff — eval-gated releases + hot rollback
+
+### Done
+
+- **`packages/releases`** (ADR-0005): file-based release store —
+  `releases/<project>/v<N>.manifest.json` write-once + mutable `index.json`.
+  - Eval gate enforced at creation (default bar 80%/80% via CLI); `--force`
+    requires `--approved-by` so overrides are attributable.
+  - Promote (staged→live, old live→retired) and rollback (live→rolledBack,
+    previous→live) are index pointer swaps.
+- **Gateway refactor**: consumes a `ManifestSource` interface — static list
+  (dev, `PF_MANIFEST_PATH`) or `releaseManifestSource` (`PF_RELEASES_DIR`),
+  which mtime-watches each project index. **Promote/rollback take effect with
+  no gateway restart** (proven in e2e: tool surface hot-swapped v1→v2→v1).
+- **CLI**: `pf release create/promote/rollback/list`.
+- Live demo with real Phase 2 artifacts: the gate **blocked** the curated
+  manifest's release (its live eval scored 67% tool-selection < 80% bar) —
+  the quality gate working on real data; forced+attributed override, promote,
+  rollback all exercised.
+- 21 tests passing (5 new: gate enforcement, lifecycle, on-disk immutability,
+  hot promote/rollback e2e, 404 for projects without a live release).
+
+### Decisions
+
+- ADR-0005: file store now (zero infra, single-writer), Postgres when the
+  dashboard lands; gateway abstracts over `ManifestSource`.
+
+### Next steps (Phase 3 continues)
+
+1. `apps/web` dashboard (Next.js): projects, releases, eval reports, audit
+   viewer — first read-only, then curation review UI.
+2. Postgres store + multi-tenancy when the dashboard needs it.
+3. OAuth 2.1 on the gateway; credential vault.
+
+---
+
 ## 2026-06-10 — Session 5: live Phase 2 validation (real Claude curation + evals)
 
 ### Done

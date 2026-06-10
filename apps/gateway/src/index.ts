@@ -1,6 +1,11 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { McpServerManifest } from "@protocolfoundry/core";
+import {
+  FileReleaseStore,
+  releaseManifestSource,
+  staticManifestSource,
+} from "@protocolfoundry/releases";
 import { createGatewayApp } from "./app.js";
 import { AuditLog } from "./audit.js";
 
@@ -55,21 +60,34 @@ const isMain = process.argv[1]?.replace(/\\/g, "/").endsWith("gateway/src/index.
 
 if (isMain) {
   const manifestPath = process.env.PF_MANIFEST_PATH;
-  if (!manifestPath) {
-    console.error("PF_MANIFEST_PATH must point to a manifest file or directory");
+  const releasesDir = process.env.PF_RELEASES_DIR;
+  if (!manifestPath && !releasesDir) {
+    console.error(
+      "Set PF_RELEASES_DIR (serve live releases, hot promote/rollback) or PF_MANIFEST_PATH (dev: static manifest file/dir)",
+    );
     process.exit(1);
   }
   const port = Number(process.env.PF_PORT ?? 3001);
-  const manifests = await loadManifests(manifestPath);
   const audit = new AuditLog(process.env.PF_AUDIT_LOG ?? "audit.log.jsonl");
-  const app = createGatewayApp(manifests, {
+  const options = {
     audit,
     ...(process.env.PF_GATEWAY_API_KEY ? { apiKey: process.env.PF_GATEWAY_API_KEY } : {}),
     approveAll: process.env.PF_APPROVE_ALL === "true",
-  });
-  app.listen(port, () => {
-    for (const m of manifests) {
-      console.log(`[gateway] serving "${m.serverName}" at http://localhost:${port}/mcp/${m.serverName}`);
+  };
+
+  const source = releasesDir
+    ? releaseManifestSource(new FileReleaseStore(releasesDir))
+    : staticManifestSource(await loadManifests(manifestPath!));
+  const app = createGatewayApp(source, options);
+  app.listen(port, async () => {
+    const names = await source.names();
+    const mode = releasesDir ? `live releases from ${releasesDir}` : `static manifests from ${manifestPath}`;
+    console.log(`[gateway] mode: ${mode}`);
+    for (const name of names) {
+      console.log(`[gateway] serving "${name}" at http://localhost:${port}/mcp/${name}`);
+    }
+    if (names.length === 0) {
+      console.warn("[gateway] no live releases yet — promote one with: pf release promote <project> <version>");
     }
   });
 }

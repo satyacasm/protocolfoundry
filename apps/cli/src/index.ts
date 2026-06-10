@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
-import { CurationProposal, WorkflowGraph } from "@protocolfoundry/core";
+import { CurationProposal, EvalRun, McpServerManifest, WorkflowGraph } from "@protocolfoundry/core";
+import { FileReleaseStore, ReleaseGateError } from "@protocolfoundry/releases";
 import {
   applyCuration,
   createAnthropicCurator,
@@ -43,8 +44,23 @@ Usage:
       Run an agent-usability eval suite against a hosted MCP endpoint.
       Requires ANTHROPIC_API_KEY.
 
-Serve a manifest with the gateway:
-  PF_MANIFEST_PATH=manifest.json npm run dev -w @protocolfoundry/gateway
+  pf release create <manifest.json> [--eval <evalrun.json>]
+             [--min-completion 0.8] [--min-selection 0.8]
+             [--approved-by <name>] [--force] [--dir <releases-dir>]
+      Create an immutable, eval-gated release (status: staged).
+      --force (with --approved-by) overrides a failing or missing gate.
+
+  pf release promote <projectId> <version> [--dir <releases-dir>]
+      Make a staged release live (previous live is retired). The gateway
+      in PF_RELEASES_DIR mode picks this up without a restart.
+
+  pf release rollback <projectId> [--dir <releases-dir>]
+      Instantly revert to the previous live release.
+
+  pf release list <projectId> [--dir <releases-dir>]
+
+Serve live releases with the gateway (hot promote/rollback):
+  PF_RELEASES_DIR=releases npm run dev -w @protocolfoundry/gateway
 `;
 
 function parseFlags(argv: string[]): { positional: string[]; flags: Map<string, string> } {
@@ -218,6 +234,93 @@ async function main(): Promise<void> {
     console.log(`Tool-selection accuracy: ${Math.round(run.toolSelectionAccuracy * 100)}%`);
     console.log(`Run -> ${outPath}; report -> ${reportPath}`);
     return;
+  }
+
+  if (command === "release") {
+    const [action, ...args] = positional;
+    const store = new FileReleaseStore(flags.get("--dir") ?? "releases");
+
+    if (action === "create") {
+      const manifestPath = args[0];
+      if (!manifestPath) {
+        console.error(USAGE);
+        process.exit(1);
+      }
+      const manifest = McpServerManifest.parse(
+        JSON.parse(await readFile(manifestPath, "utf8")),
+      );
+      const evalPath = flags.get("--eval");
+      const evalRun = evalPath
+        ? EvalRun.parse(JSON.parse(await readFile(evalPath, "utf8")))
+        : undefined;
+      const approvedBy = flags.get("--approved-by");
+      try {
+        const release = await store.createRelease(manifest, {
+          ...(evalRun ? { evalRun } : {}),
+          gate: {
+            minTaskCompletionRate: Number(flags.get("--min-completion") ?? 0.8),
+            minToolSelectionAccuracy: Number(flags.get("--min-selection") ?? 0.8),
+          },
+          ...(approvedBy ? { approvedBy } : {}),
+          force: flags.get("--force") === "true",
+        });
+        console.log(
+          `Created release v${release.version} for "${release.projectId}" (status: ${release.status})`,
+        );
+        console.log(`Promote it with: pf release promote ${release.projectId} ${release.version}`);
+      } catch (error) {
+        if (error instanceof ReleaseGateError) {
+          console.error(`BLOCKED: ${error.message}`);
+          process.exit(2);
+        }
+        throw error;
+      }
+      return;
+    }
+
+    if (action === "promote") {
+      const [projectId, versionRaw] = args;
+      if (!projectId || !versionRaw) {
+        console.error(USAGE);
+        process.exit(1);
+      }
+      const release = await store.promote(projectId, Number(versionRaw));
+      console.log(`v${release.version} is now LIVE for "${projectId}"`);
+      return;
+    }
+
+    if (action === "rollback") {
+      const projectId = args[0];
+      if (!projectId) {
+        console.error(USAGE);
+        process.exit(1);
+      }
+      const release = await store.rollback(projectId);
+      console.log(`Rolled back: v${release.version} is LIVE again for "${projectId}"`);
+      return;
+    }
+
+    if (action === "list") {
+      const projectId = args[0];
+      if (!projectId) {
+        console.error(USAGE);
+        process.exit(1);
+      }
+      const releases = await store.list(projectId);
+      if (releases.length === 0) {
+        console.log(`No releases for "${projectId}"`);
+        return;
+      }
+      for (const r of [...releases].sort((a, b) => b.version - a.version)) {
+        const eval_ = r.evalRunId ? "  eval:yes" : "  eval:no";
+        const by = r.approvedBy ? `  approvedBy:${r.approvedBy}` : "";
+        console.log(`  v${r.version}  ${r.status.toUpperCase().padEnd(10)}${eval_}${by}  ${r.createdAt}`);
+      }
+      return;
+    }
+
+    console.error(USAGE);
+    process.exit(1);
   }
 
   console.error(USAGE);

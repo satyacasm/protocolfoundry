@@ -50,8 +50,8 @@ with Claude against a real public spec.
 - [x] Human-in-the-loop review: `pf curate` → human reviews proposal →
       `pf apply --refinements ... --composed ...` (partial approval supported);
       compositions with destructive steps inherit the approval gate.
-- [ ] Release model (immutable, eval-gated, roll-backable) — deferred to
-      Phase 3 alongside the database (see ADR-0004 consequences).
+- [x] Release model (immutable, eval-gated, roll-backable) — delivered at the
+      start of Phase 3 (`packages/releases`, ADR-0005).
 - [x] **Live exit-criterion run** with `claude-opus-4-8`
       (docs/validation/2026-06-10-phase2-live-evals.md): composed tool = 2
       steps vs 3 and ~18% fewer input tokens when adopted; curated
@@ -67,8 +67,14 @@ the large-spec campaign.
 
 ## Phase 3 — Product (dashboard + hosting business)
 
+- [x] Release store (`packages/releases`, ADR-0005): immutable versioned
+      manifests, eval-gated creation (force requires attribution),
+      promote/rollback as pointer swaps; gateway serves live releases via
+      `ManifestSource` with hot promote/rollback (no restart);
+      `pf release create/promote/rollback/list`.
 - [ ] `apps/web` dashboard: projects, source upload, graph review/curation UI,
       eval reports, releases, audit viewer
+- [ ] Postgres control-plane store replacing the file release store (ADR-0005)
 - [ ] Credential vault (KMS-encrypted), per-tool scopes
 - [ ] OAuth 2.1 authorization on the gateway (MCP auth spec)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME

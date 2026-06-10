@@ -13,6 +13,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@protocolfoundry/core": "*",
+    "@protocolfoundry/releases": "*",
     "express": "^5.1.0",
     "zod": "^3.24.0"
   },

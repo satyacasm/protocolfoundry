@@ -1,6 +1,10 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { McpServerManifest } from "@protocolfoundry/core";
+import {
+  staticManifestSource,
+  type ManifestSource,
+} from "@protocolfoundry/releases";
 import { createMcpServerForManifest, type McpServerDeps } from "./mcp.js";
 
 export interface GatewayOptions extends McpServerDeps {
@@ -38,12 +42,18 @@ function requireApiKey(apiKey: string | undefined) {
  * Multi-tenant gateway: each manifest is served as a stateless Streamable
  * HTTP MCP endpoint at /mcp/<serverName>. A fresh Server+Transport pair is
  * created per request (the SDK's recommended stateless pattern).
+ *
+ * Accepts either a static manifest list (dev mode) or a ManifestSource —
+ * e.g. the release store's live-release source, which makes promote/rollback
+ * take effect without a restart.
  */
 export function createGatewayApp(
-  manifests: McpServerManifest[],
+  manifests: McpServerManifest[] | ManifestSource,
   options: GatewayOptions,
 ): Express {
-  const byName = new Map(manifests.map((m) => [m.serverName, m]));
+  const source: ManifestSource = Array.isArray(manifests)
+    ? staticManifestSource(manifests)
+    : manifests;
   const app = express();
   app.use(express.json({ limit: "4mb" }));
 
@@ -53,13 +63,13 @@ export function createGatewayApp(
     );
   }
 
-  app.get("/healthz", (_req, res) => {
-    res.json({ ok: true, servers: [...byName.keys()] });
+  app.get("/healthz", async (_req, res) => {
+    res.json({ ok: true, servers: await source.names() });
   });
 
   app.post("/mcp/:server", requireApiKey(options.apiKey), async (req, res) => {
     const serverName = String(req.params.server);
-    const manifest = byName.get(serverName);
+    const manifest = await source.get(serverName);
     if (!manifest) {
       res.status(404).json({
         jsonrpc: "2.0",

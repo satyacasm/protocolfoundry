@@ -16,6 +16,7 @@
     "@protocolfoundry/curation": "*",
     "@protocolfoundry/discovery": "*",
     "@protocolfoundry/evals": "*",
-    "@protocolfoundry/generator": "*"
+    "@protocolfoundry/generator": "*",
+    "@protocolfoundry/releases": "*"
   }
 }
