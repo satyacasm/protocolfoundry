@@ -600,6 +600,64 @@ td.desc {
   color: var(--ember-soft);
 }
 
+/* ---------- write actions & flashes ---------- */
+
+.ver-link:hover {
+  color: var(--ember-soft);
+}
+
+.action-button {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  cursor: pointer;
+  background: rgba(255, 122, 31, 0.1);
+  border: 1px solid rgba(255, 122, 31, 0.5);
+  color: var(--ember-soft);
+  transition: background 140ms ease;
+}
+
+.action-button:hover {
+  background: rgba(255, 122, 31, 0.22);
+}
+
+.action-button.danger {
+  background: rgba(224, 91, 91, 0.08);
+  border-color: rgba(224, 91, 91, 0.5);
+  color: var(--bad);
+}
+
+.action-button.danger:hover {
+  background: rgba(224, 91, 91, 0.2);
+}
+
+.flash {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 9px 14px;
+  margin: 0 0 22px;
+  border: 1px solid var(--line-bright);
+}
+
+.ok-flash {
+  color: var(--ok);
+  border-color: rgba(135, 201, 144, 0.45);
+  background: rgba(135, 201, 144, 0.06);
+}
+
+.bad-flash {
+  color: var(--bad);
+  border-color: rgba(224, 91, 91, 0.45);
+  background: rgba(224, 91, 91, 0.06);
+}
+
+.dim-flash {
+  color: var(--text-faint);
+  border-style: dashed;
+}
+
 /* ---------- access gate (login) ---------- */
 
 .gate {

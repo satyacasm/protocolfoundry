@@ -83,8 +83,11 @@ the large-spec campaign.
 - [x] Dashboard auth (ADR-0006): `PF_DASHBOARD_PASSWORD` → HMAC-signed 12h
       session cookie via middleware; open-mode banner when unset;
       single-operator placeholder until SSO at design-partner onboarding.
-- [ ] Dashboard v2 (write paths): promote/rollback buttons, curation review
-      UI, source upload — now unblocked by auth + Postgres
+- [x] Dashboard v2a — promote/rollback from the UI: server actions gated by
+      operator session (refused in open mode), success/error flashes,
+      `releasePromoted`/`releaseRolledBack` audit events with user actor.
+- [ ] Dashboard v2b: curation review UI, source upload
+- [ ] Audit events into Postgres (viewer paginating from SQL)
 - [ ] Credential vault (KMS-encrypted), per-tool scopes
 - [ ] OAuth 2.1 authorization on the gateway (MCP auth spec)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME

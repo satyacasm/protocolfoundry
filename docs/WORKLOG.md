@@ -7,6 +7,39 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 9: dashboard write paths (promote/rollback from the UI)
+
+### Done
+
+- **Server actions** (`apps/web/src/lib/actions.ts`): `promoteRelease` /
+  `rollbackRelease` — operator-gated (session cookie re-verified inside the
+  action; **refused entirely in open mode** so an unprotected dashboard stays
+  read-only), append `releasePromoted`/`releaseRolledBack` audit events with
+  `actor user:operator`, redirect back with success/error flash messages.
+- **Project page**: release rows restructured (version links + action
+  buttons); Promote on staged releases, Roll back on live (only when a
+  retired predecessor exists); flash banners; read-only hint in open mode.
+- Verified live end-to-end via no-JS form replay (curl/Node): promote v3 →
+  303, store v3 LIVE / v1 RETIRED, audit event written; Roll back button
+  appeared; rollback → v1 live again + audit event; unauthenticated POST →
+  307 to /login (middleware blocks before the action runs).
+
+### Incident note
+
+- Windows Defender flagged my own PowerShell diagnostic (Invoke-WebRequest +
+  hidden-input regex = `Trojan:Win32/PowhidSubExec.B` behavioral signature)
+  while testing the forms. **False positive on the test command, not the
+  project** — no file quarantined; switched HTTP verification to curl/Node.
+  Lesson recorded: don't scrape hidden form fields from PowerShell on Windows.
+
+### Next steps
+
+1. Audit events → Postgres (paginated viewer).
+2. Dashboard v2b: curation review UI, source upload.
+3. OAuth 2.1 on the gateway; credential vault.
+
+---
+
 ## 2026-06-10 — Session 8: Postgres store + dashboard auth
 
 ### Done

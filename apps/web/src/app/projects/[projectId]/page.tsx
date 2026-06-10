@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { promoteRelease, rollbackRelease } from "@/lib/actions";
 import { store } from "@/lib/data";
 import { formatWhen, Gauge, SectionHead, StatusBadge } from "@/components/ui";
 
@@ -7,15 +8,20 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
 }) {
   const { projectId } = await params;
+  const { notice, error } = await searchParams;
   const releases = await store.list(projectId);
   if (releases.length === 0) notFound();
 
   const sorted = [...releases].sort((a, b) => b.version - a.version);
   const live = releases.find((r) => r.status === "live");
+  const canRollback = Boolean(live) && releases.some((r) => r.status === "retired");
+  const writesEnabled = Boolean(process.env.PF_DASHBOARD_PASSWORD);
   const evalRuns = new Map(
     await Promise.all(
       sorted.map(
@@ -37,6 +43,14 @@ export default async function ProjectPage({
           : "No live release. Promote a staged release to put this server on the floor."}
       </p>
 
+      {notice ? <p className="flash ok-flash">{notice}</p> : null}
+      {error ? <p className="flash bad-flash">{error}</p> : null}
+      {!writesEnabled ? (
+        <p className="flash dim-flash">
+          Read-only: set PF_DASHBOARD_PASSWORD to enable promote / rollback from here.
+        </p>
+      ) : null}
+
       <section className="section">
         <SectionHead
           no="01"
@@ -47,13 +61,17 @@ export default async function ProjectPage({
           {sorted.map((release) => {
             const evalRun = evalRuns.get(release.version);
             return (
-              <Link
+              <div
                 key={release.id}
-                href={`/projects/${projectId}/releases/${release.version}`}
                 className={`release-row${release.status === "live" ? " live" : ""}`}
               >
                 <div className="row-head">
-                  <span className="ver">v{release.version}</span>
+                  <Link
+                    href={`/projects/${projectId}/releases/${release.version}`}
+                    className="ver ver-link"
+                  >
+                    v{release.version}
+                  </Link>
                   <StatusBadge status={release.status} />
                   {evalRun ? (
                     <span className="chip">eval: {evalRun.agentModel}</span>
@@ -63,6 +81,20 @@ export default async function ProjectPage({
                   {release.approvedBy ? (
                     <span className="chip warn">forced · {release.approvedBy}</span>
                   ) : null}
+                  {writesEnabled && release.status === "staged" ? (
+                    <form action={promoteRelease.bind(null, projectId, release.version)}>
+                      <button type="submit" className="action-button">
+                        Promote
+                      </button>
+                    </form>
+                  ) : null}
+                  {writesEnabled && release.status === "live" && canRollback ? (
+                    <form action={rollbackRelease.bind(null, projectId)}>
+                      <button type="submit" className="action-button danger">
+                        Roll back
+                      </button>
+                    </form>
+                  ) : null}
                   <span className="when">{formatWhen(release.createdAt)}</span>
                 </div>
                 {evalRun ? (
@@ -71,7 +103,7 @@ export default async function ProjectPage({
                     <Gauge label="tool select" value={evalRun.toolSelectionAccuracy} />
                   </div>
                 ) : null}
-              </Link>
+              </div>
             );
           })}
         </div>
