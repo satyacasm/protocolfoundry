@@ -233,4 +233,20 @@ export class PgReleaseStore implements ReleaseStore {
     if (value === null || value === undefined) return undefined;
     return EvalRun.parse(parseJsonb(value));
   }
+
+  async attachEvalRun(projectId: string, version: number, evalRun: EvalRun): Promise<Release> {
+    return this.tx(async (client) => {
+      const { rows } = await client.query(
+        "SELECT * FROM releases WHERE project_id = $1 AND version = $2",
+        [projectId, version],
+      );
+      const target = rows[0];
+      if (!target) throw new Error(`No release v${version} for project "${projectId}"`);
+      await client.query(
+        "UPDATE releases SET eval_run = $1::jsonb, eval_run_id = $2 WHERE project_id = $3 AND version = $4",
+        [JSON.stringify(evalRun), evalRun.id, projectId, version],
+      );
+      return rowToRelease({ ...target, eval_run_id: evalRun.id });
+    });
+  }
 }

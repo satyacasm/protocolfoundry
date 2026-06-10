@@ -96,6 +96,26 @@ describe("FileReleaseStore", () => {
     await expect(store.promote("taskboard", 2)).rejects.toThrow(/only staged/);
   });
 
+  it("attaches an eval run to an existing release (dashboard eval path)", async () => {
+    const store = new FileReleaseStore(join(rootDir, "attach"));
+    const v1 = await store.createRelease(manifest, { approvedBy: "satya", force: true });
+    expect(v1.evalRunId).toBeUndefined();
+    expect(await store.getEvalRun("taskboard", 1)).toBeUndefined();
+
+    const run = evalRun(0.9, 1);
+    const updated = await store.attachEvalRun("taskboard", 1, run);
+    expect(updated.evalRunId).toBe(run.id);
+    expect((await store.getEvalRun("taskboard", 1))!.id).toBe(run.id);
+    expect((await store.list("taskboard"))[0]!.evalRunId).toBe(run.id);
+
+    // re-runs replace the evidence
+    const rerun = evalRun(1, 1);
+    await store.attachEvalRun("taskboard", 1, rerun);
+    expect((await store.getEvalRun("taskboard", 1))!.id).toBe(rerun.id);
+
+    await expect(store.attachEvalRun("taskboard", 99, run)).rejects.toThrow(/No release v99/);
+  });
+
   it("keeps released manifests immutable on disk", async () => {
     const store = new FileReleaseStore(join(rootDir, "immutable"));
     const v1 = await store.createRelease(manifest, { evalRun: evalRun(1, 1), gate: GATE });

@@ -92,6 +92,20 @@ describe("PgReleaseStore", () => {
     expect(await store.listProjects()).toEqual(["taskboard"]);
   });
 
+  it("attaches an eval run to an existing release (dashboard eval path)", async () => {
+    const store = freshStore();
+    await store.createRelease(manifest, { approvedBy: "satya", force: true });
+    expect(await store.getEvalRun("taskboard", 1)).toBeUndefined();
+
+    const run = evalRun(0.9, 1);
+    const updated = await store.attachEvalRun("taskboard", 1, run);
+    expect(updated.evalRunId).toBe(run.id);
+    expect((await store.getEvalRun("taskboard", 1))!.id).toBe(run.id);
+    expect((await store.list("taskboard"))[0]!.evalRunId).toBe(run.id);
+
+    await expect(store.attachEvalRun("taskboard", 99, run)).rejects.toThrow(/No release v99/);
+  });
+
   it("works as a gateway ManifestSource with hot promote/rollback", async () => {
     const store = freshStore();
     const source = releaseManifestSource(store, 0);

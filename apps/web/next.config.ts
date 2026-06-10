@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "20mb",
     },
   },
+  // The in-process eval gateway (lib/eval-jobs.ts) runs express + the MCP SDK
+  // inside the Next server — keep them (and the agent SDK) unbundled.
+  serverExternalPackages: ["express", "@modelcontextprotocol/sdk", "@anthropic-ai/sdk"],
 };
 
 export default nextConfig;

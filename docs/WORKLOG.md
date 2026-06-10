@@ -7,6 +7,46 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 16: eval runs from the dashboard (in-process job runner)
+
+### Done
+
+- **The loop is closed**: upload spec → curate → stage → **run eval** →
+  promote, all in the browser. The missing piece since Session 11.
+- **`attachEvalRun(projectId, version, evalRun)`** on `ReleaseStore` (file +
+  Postgres, tests for both): attach/replace the eval evidence on an existing
+  release without touching the immutable manifest. Dashboard staged-then-
+  evaled releases no longer need the CLI round trip.
+- **`lib/eval-jobs.ts`**: dashboard job runner. Serves the release's manifest
+  on an **ephemeral loopback-only gateway** (same executor/credential
+  resolver as production, vault-aware), runs the suite with
+  `createAnthropicAgent` (default `claude-opus-4-8`), attaches the EvalRun,
+  records an `evalCompleted` audit event (new core audit kind). One job per
+  project; progress persisted to the workspace after every task
+  (`onTaskComplete` hook added to `runEvalSuite`). In-process by design for
+  the single-operator deployment — a real queue replaces it at multi-tenant.
+- **Project page "Evals" section**: suite upload/paste (validated by new
+  `parseEvalSuite` zod schema in @protocolfoundry/evals), job status panel
+  with progress gauge auto-refreshing every 4s while running, "Run eval" /
+  "Re-run eval" buttons per staged/live release. Honest hints when writes
+  are disabled or ANTHROPIC_API_KEY is missing.
+- `next.config`: `serverExternalPackages` for express/MCP SDK/Anthropic SDK
+  (they now run inside the Next server process).
+- **Tests: 53 green** (4 new). Highlight: full-loop integration test —
+  scripted agent + mock HTTP upstream + ephemeral gateway + temp release
+  store proves spec-level eval mechanics with no API key. Live form-replay
+  smoke: suite upload (303 + saved), Run eval correctly refused without
+  ANTHROPIC_API_KEY.
+
+### Next steps
+
+1. OAuth 2.1 external-AS flow (raised priority per competitive survey).
+2. Large-spec eval campaign (Shiprocket with real token — can now run from
+   the dashboard) → naive-vs-curated number for the public report.
+3. Metering/billing, drift detection, design partners.
+
+---
+
 ## 2026-06-11 — Session 15: public agent-readiness reports (signed share links)
 
 ### Done

@@ -108,6 +108,12 @@ the large-spec campaign.
       download (manifest, client configs, token instructions, eval report —
       never credentials, never source; ADR-0003 intact) and `.zip` spec
       uploads in the Forge.
+- [x] **Eval runs from the dashboard**: per-project eval suites uploaded in
+      the UI; "Run eval" on any staged/live release serves that manifest on
+      an ephemeral loopback gateway, runs the agent-loop suite, attaches the
+      `EvalRun` to the release (`attachEvalRun`, both store backends), with
+      live progress + `evalCompleted` audit events. In-process job runner —
+      a real queue replaces it at multi-tenant.
 - [x] **Public agent-readiness reports** (competitive move #1,
       docs/06-competitive-landscape.md): HMAC-signed shareable
       `/reports/<project>/<version>` links from the release page — scores,

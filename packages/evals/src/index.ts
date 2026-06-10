@@ -1,5 +1,6 @@
 export {
   createAnthropicAgent,
+  parseEvalSuite,
   runEvalSuite,
   type AgentModel,
   type AgentToolDefinition,

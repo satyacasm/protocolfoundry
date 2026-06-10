@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CurationProposal, WorkflowGraph } from "@protocolfoundry/core";
+import { parseEvalSuite, type EvalSuite } from "@protocolfoundry/evals";
 
 /**
  * The "forge" workspace: in-progress artifacts (ingested graphs, curation
@@ -47,6 +48,45 @@ export async function saveProposal(proposal: CurationProposal): Promise<void> {
 export async function getProposal(projectId: string): Promise<CurationProposal | undefined> {
   const raw = await readJson(join(projectDir(projectId), "proposal.json"));
   return raw === undefined ? undefined : CurationProposal.parse(raw);
+}
+
+/** Eval suite for a project (JSON validated by @protocolfoundry/evals). */
+export async function saveSuite(projectId: string, suite: EvalSuite): Promise<void> {
+  const dir = projectDir(projectId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "suite.json"), JSON.stringify(suite, null, 2), "utf8");
+}
+
+export async function getSuite(projectId: string): Promise<EvalSuite | undefined> {
+  const raw = await readJson(join(projectDir(projectId), "suite.json"));
+  return raw === undefined ? undefined : parseEvalSuite(raw);
+}
+
+/** Latest dashboard-triggered eval job for a project (one at a time). */
+export interface EvalJobState {
+  projectId: string;
+  version: number;
+  suiteName: string;
+  agentModel: string;
+  status: "running" | "succeeded" | "failed";
+  completedTasks: number;
+  totalTasks: number;
+  startedAt: string;
+  finishedAt?: string;
+  evalRunId?: string;
+  error?: string;
+}
+
+export async function saveEvalJob(state: EvalJobState): Promise<void> {
+  const dir = projectDir(state.projectId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "eval-job.json"), JSON.stringify(state, null, 2), "utf8");
+}
+
+export async function getEvalJob(projectId: string): Promise<EvalJobState | undefined> {
+  return (await readJson(join(projectDir(projectId), "eval-job.json"))) as
+    | EvalJobState
+    | undefined;
 }
 
 export interface ForgeProject {

@@ -189,6 +189,21 @@ export class FileReleaseStore implements ReleaseStore {
     return McpServerManifest.parse(JSON.parse(await readFile(file, "utf8")));
   }
 
+  /** Attach (or replace) the eval run for an existing release. */
+  async attachEvalRun(projectId: string, version: number, evalRun: EvalRun): Promise<Release> {
+    const index = await this.readIndex(projectId);
+    const release = index.releases.find((r) => r.version === version);
+    if (!release) throw new Error(`No release v${version} for project "${projectId}"`);
+    await writeFile(
+      join(this.projectDir(projectId), `v${version}.evalrun.json`),
+      JSON.stringify(evalRun, null, 2),
+      "utf8",
+    );
+    release.evalRunId = evalRun.id;
+    await this.writeIndex(index);
+    return release;
+  }
+
   /** The eval run stored with a release, if one backed it. */
   async getEvalRun(projectId: string, version: number): Promise<EvalRun | undefined> {
     const file = join(this.projectDir(projectId), `v${version}.evalrun.json`);

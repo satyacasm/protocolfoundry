@@ -243,6 +243,14 @@ see, full eval reports, and the audit log with approval-gate events.
 > Requires `PF_DASHBOARD_PASSWORD` (writes are disabled in open mode) and,
 > for the curation button, `ANTHROPIC_API_KEY` on the dashboard server.
 
+The project page has an **Evals** section: upload (or paste) a suite JSON
+(`{ name, tasks: [{ id, description, prompt, expectedTools, successPattern }] }`,
+e.g. `examples/taskboard/eval-suite.json`), then click **Run eval** on any
+staged or live release. The dashboard serves that release's manifest on an
+ephemeral local gateway, runs the agent loop against it (needs
+`ANTHROPIC_API_KEY` on the dashboard server), shows live progress, and
+attaches the scores to the release — no CLI needed.
+
 Releases that carry an eval also get a **public report** link — an
 HMAC-signed `/reports/<project>/<version>?sig=…` URL you can paste into docs
 or a changelog. Anyone with the link sees the scores, task results, and
