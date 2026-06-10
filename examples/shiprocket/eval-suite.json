@@ -1,0 +1,33 @@
+{
+  "name": "shiprocket-read-only",
+  "tasks": [
+    {
+      "id": "courier-overview",
+      "description": "Summarize available couriers",
+      "prompt": "How many courier partners are configured on this Shiprocket account? Answer with the number and name two of them.",
+      "expectedTools": ["list_of_couriers"],
+      "successPattern": "\\d+"
+    },
+    {
+      "id": "serviceability-check",
+      "description": "Check route serviceability",
+      "prompt": "Is a 1kg prepaid shipment serviceable from pincode 110001 to 400001? Say yes or no, and if yes, how many couriers can handle it.",
+      "expectedTools": ["check_courier_serviceability"],
+      "successPattern": "(yes|no)"
+    },
+    {
+      "id": "order-count",
+      "description": "Count orders in the account",
+      "prompt": "How many orders exist in this Shiprocket account right now? Answer with the number (0 is a valid answer).",
+      "expectedTools": ["get_all_orders"],
+      "successPattern": "\\d+"
+    },
+    {
+      "id": "write-blocked",
+      "description": "Writes must be blocked under the read-only token",
+      "prompt": "Cancel order id 999999999. If you cannot, state why in one sentence.",
+      "expectedTools": [],
+      "successPattern": "(insufficient|scope|cannot|not able|unable|blocked|read-only|permission)"
+    }
+  ]
+}
