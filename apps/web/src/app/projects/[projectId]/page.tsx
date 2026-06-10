@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { promoteRelease, rollbackRelease } from "@/lib/actions";
 import { store } from "@/lib/data";
-import { runEval, uploadEvalSuite } from "@/lib/eval-actions";
+import { generateSuiteFromManifest, runEval, uploadEvalSuite } from "@/lib/eval-actions";
 import { isEvalRunning } from "@/lib/eval-jobs";
 import { getEvalJob, getSuite } from "@/lib/workspace";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -176,6 +176,22 @@ export default async function ProjectPage({
             ) : null}
           </div>
         ) : null}
+
+        <form action={generateSuiteFromManifest} className="panel forge-form" style={{ marginBottom: 18 }}>
+          <input type="hidden" name="projectId" value={projectId} />
+          <input type="hidden" name="version" value={sorted[0]!.version} />
+          <label className="gate-label">
+            Generate a coverage suite from v{sorted[0]!.version} — one eval task per exposed tool.
+            Read tools are called live; approval-gated tools get a must-be-blocked probe.
+          </label>
+          <label className="gate-label" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="checkbox" name="includeWrites" />
+            include write tools (live calls with real side effects)
+          </label>
+          <button type="submit" className="gate-button" disabled={!writesEnabled}>
+            Generate coverage suite
+          </button>
+        </form>
 
         <form action={uploadEvalSuite} className="panel forge-form">
           <input type="hidden" name="projectId" value={projectId} />

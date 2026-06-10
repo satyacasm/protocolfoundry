@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { parseEvalSuite } from "@protocolfoundry/evals";
+import { generateCoverageSuite, parseEvalSuite } from "@protocolfoundry/evals";
+import { store } from "./data";
 import { startEvalJob } from "./eval-jobs";
 import { appendAudit, requireOperator } from "./operator";
 import { saveSuite } from "./workspace";
@@ -43,6 +44,39 @@ export async function uploadEvalSuite(formData: FormData): Promise<void> {
     fail(back, error instanceof Error ? error.message : String(error));
   }
   redirect(`${back}?notice=${encodeURIComponent(`Eval suite saved (${taskCount} tasks)`)}`);
+}
+
+export async function generateSuiteFromManifest(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("projectId") ?? "");
+  const version = Number(formData.get("version") ?? 0);
+  const includeWrites = formData.get("includeWrites") === "on";
+  const back = `/projects/${projectId}`;
+  let actor: string;
+  try {
+    actor = await requireOperator();
+  } catch (error) {
+    fail(back, error instanceof Error ? error.message : String(error));
+  }
+  let notice = "";
+  try {
+    const manifest = await store.getManifest(projectId, version);
+    const { suite, skippedWriteTools } = generateCoverageSuite(manifest, { includeWrites });
+    await saveSuite(projectId, suite);
+    await appendAudit(
+      "manifestChange",
+      projectId,
+      { action: "coverageSuiteGenerated", version, tasks: suite.tasks.length, skippedWriteTools },
+      actor,
+    );
+    notice =
+      `Coverage suite generated from v${version}: ${suite.tasks.length} task(s), one per tool` +
+      (skippedWriteTools.length > 0
+        ? ` — ${skippedWriteTools.length} write tool(s) skipped (${skippedWriteTools.join(", ")}); tick "include write tools" to cover them`
+        : "");
+  } catch (error) {
+    fail(back, error instanceof Error ? error.message : String(error));
+  }
+  redirect(`${back}?notice=${encodeURIComponent(notice.slice(0, 400))}`);
 }
 
 export async function runEval(formData: FormData): Promise<void> {

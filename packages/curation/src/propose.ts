@@ -156,7 +156,7 @@ Rules:
 }
 
 /** Real Claude-backed curator. Requires ANTHROPIC_API_KEY in the environment. */
-export function createAnthropicCurator(model = "claude-opus-4-8"): Curator {
+export function createAnthropicCurator(model = "claude-sonnet-4-6"): Curator {
   const client = new Anthropic();
   return {
     model,

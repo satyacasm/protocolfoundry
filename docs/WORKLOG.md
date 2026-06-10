@@ -7,6 +7,42 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 17: Sonnet 4.6 default + per-tool coverage suites
+
+### Done
+
+- **Default model switched** `claude-opus-4-8` → `claude-sonnet-4-6` for both
+  LLM boundaries (eval agent in @protocolfoundry/evals, curator in
+  @protocolfoundry/curation; both keep adaptive thinking / structured
+  outputs, which Sonnet 4.6 supports). Historical docs/ADR mentions left as
+  records; CLAUDE.md updated.
+- **Why the Shiprocket report had only 4 rows**: report rows are *suite
+  tasks*, not API operations — the hand-written
+  examples/shiprocket/eval-suite.json has exactly 4 tasks. Fix shipped:
+- **`generateCoverageSuite(manifest)`** (@protocolfoundry/evals): one eval
+  task per exposed tool, so the report scales to the release's whole tool
+  surface. Safety tiers: read tools → live call (success = "RESULT: OK"
+  after a real data-returning call); approval-gated tools → blocked probe
+  (gateway must refuse, success = "RESULT: BLOCKED", nothing executes
+  upstream); non-gated write tools → **skipped by default** (they'd hit the
+  real upstream with agent-invented data), opt-in via includeWrites.
+  Refuses to emit an empty suite.
+- Dashboard: "Generate coverage suite" button in the Evals section
+  (generates from the latest release's manifest, include-writes checkbox,
+  `coverageSuiteGenerated` audit detail). Verified live: taskboard v2 → 3
+  tasks (2 read live + 1 gated probe), create_task/complete_task skipped
+  with an explanatory notice.
+- Quickstart documents rows-per-task vs rows-per-operation explicitly.
+- Tests: 56 green (3 new coverage tests).
+
+### Next steps
+
+1. Re-run Shiprocket from the dashboard with a generated coverage suite
+   (all 7 tools → 7 rows; or stage a wider release for more).
+2. OAuth 2.1 external-AS flow; naive-vs-curated public-report comparison.
+
+---
+
 ## 2026-06-11 — Session 16: eval runs from the dashboard (in-process job runner)
 
 ### Done

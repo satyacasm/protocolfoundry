@@ -42,7 +42,7 @@ product detail.**
   `applyCuration` → curated manifest with composed task-level tools (ADR-0004).
 - `packages/evals` — agent-loop eval harness over MCP; `EvalRun` + reports.
   LLM boundaries (`Curator`, `AgentModel`) are interfaces — tests use scripted
-  fakes, no API key; real impls use Anthropic SDK (`claude-opus-4-8`, adaptive
+  fakes, no API key; real impls use Anthropic SDK (`claude-sonnet-4-6`, adaptive
   thinking, structured outputs).
 - `apps/` — `gateway` + `cli` (Phase 1–2), `web` dashboard (Phase 3).
 - Commands: `npm run typecheck` / `npm run build` / `npm run test` (root, runs

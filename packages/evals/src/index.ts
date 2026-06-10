@@ -11,3 +11,8 @@ export {
   type RunOptions,
 } from "./runner.js";
 export { renderComparisonReport, renderEvalReport } from "./report.js";
+export {
+  generateCoverageSuite,
+  type CoverageOptions,
+  type CoverageSuiteResult,
+} from "./coverage.js";

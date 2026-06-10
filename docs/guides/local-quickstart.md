@@ -243,10 +243,16 @@ see, full eval reports, and the audit log with approval-gate events.
 > Requires `PF_DASHBOARD_PASSWORD` (writes are disabled in open mode) and,
 > for the curation button, `ANTHROPIC_API_KEY` on the dashboard server.
 
-The project page has an **Evals** section: upload (or paste) a suite JSON
+The project page has an **Evals** section: click **Generate coverage suite**
+to get one eval task per tool the release exposes (read tools are called
+live, approval-gated tools get a must-be-refused probe, non-gated write
+tools are skipped unless you opt in — they have real side effects), or
+upload/paste a hand-written suite JSON
 (`{ name, tasks: [{ id, description, prompt, expectedTools, successPattern }] }`,
-e.g. `examples/taskboard/eval-suite.json`), then click **Run eval** on any
-staged or live release. The dashboard serves that release's manifest on an
+e.g. `examples/taskboard/eval-suite.json`) for workflow-level tasks. Note:
+the eval report has **one row per suite task**, not per spec operation —
+coverage of every API comes from the generated coverage suite. Then click
+**Run eval** on any staged or live release. The dashboard serves that release's manifest on an
 ephemeral local gateway, runs the agent loop against it (needs
 `ANTHROPIC_API_KEY` on the dashboard server), shows live progress, and
 attaches the scores to the release — no CLI needed.

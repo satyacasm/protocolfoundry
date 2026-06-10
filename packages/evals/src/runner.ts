@@ -79,7 +79,7 @@ const AGENT_SYSTEM_PROMPT =
 
 /** Claude-backed agent loop participant. Requires ANTHROPIC_API_KEY. */
 export function createAnthropicAgent(
-  model = "claude-opus-4-8",
+  model = "claude-sonnet-4-6",
   options: { adaptiveThinking?: boolean } = {},
 ): AgentModel {
   const client = new Anthropic();
