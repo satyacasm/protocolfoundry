@@ -10,4 +10,6 @@ Deployable applications (see docs/04-roadmap.md):
   credentialBindings.
 - `cli/` — `pf ingest <openapi> --project <id>` and `pf generate <graph>`
   (Phase 1, live). Run via `npm run dev -w @protocolfoundry/cli -- <args>`.
-- `web/` — Next.js dashboard / control plane (Phase 3, not started).
+- `web/` — Next.js control-plane dashboard (Phase 3, read-only v1).
+  `npm run dev -w @protocolfoundry/web` → http://localhost:3100.
+  Env: `PF_RELEASES_DIR` (release store), `PF_AUDIT_LOG` (gateway audit file).

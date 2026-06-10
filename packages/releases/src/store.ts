@@ -221,4 +221,15 @@ export class FileReleaseStore {
     const file = join(this.projectDir(projectId), `v${version}.manifest.json`);
     return McpServerManifest.parse(JSON.parse(await readFile(file, "utf8")));
   }
+
+  /** The eval run stored with a release, if one backed it. */
+  async getEvalRun(projectId: string, version: number): Promise<EvalRun | undefined> {
+    const file = join(this.projectDir(projectId), `v${version}.evalrun.json`);
+    try {
+      return EvalRun.parse(JSON.parse(await readFile(file, "utf8")));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw error;
+    }
+  }
 }

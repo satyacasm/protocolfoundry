@@ -7,6 +7,45 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 7: control-plane dashboard v1 (read-only)
+
+### Done
+
+- **`apps/web`** — Next.js 15 dashboard, "precision foundry" design language
+  (dark steel + molten-ember accent, Chakra Petch display / IBM Plex Mono
+  data, blueprint-grid + grain atmosphere, instrument-gauge eval bars,
+  pulsing live badges). Port 3100.
+  - **Overview ("The Floor")**: stat strip (projects, live servers, releases,
+    audited tool calls), furnace-slot project cards with live-edge glow +
+    eval gauges, recent audit activity.
+  - **Project page**: release timeline (live node glows) with status badges,
+    eval gauges per release, forced-override attribution chips.
+  - **Release detail**: manifest panel (endpoint, base URL, auth schemes,
+    provenance), tool-surface table (1:1 vs composed chips, per-call-approval
+    gates), full eval report with per-task results.
+  - **Audit viewer**: kind filters, actor, hashed args, upstream statuses,
+    gated events highlighted.
+- Reads the live file release store + gateway audit log directly (server
+  components, `PF_RELEASES_DIR` / `PF_AUDIT_LOG`) — zero mock data; verified
+  rendering the real Phase 2/3 artifacts (composed tool, 67% gauge, satya's
+  gate override, gated deletion event).
+- `FileReleaseStore.getEvalRun()` added for the report pages.
+- All 21 tests + full workspace typecheck green.
+
+### Decisions
+
+- Dashboard v1 is deliberately read-only: write paths (promote/rollback
+  buttons, curation review UI, source upload) need auth + the Postgres store
+  first — sequenced behind them in the roadmap.
+
+### Next steps
+
+1. Postgres control-plane store (replaces file store behind the same API).
+2. Dashboard auth, then v2 write paths (promote/rollback, curation review).
+3. OAuth 2.1 on the gateway; credential vault.
+
+---
+
 ## 2026-06-10 — Session 6: Phase 3 kickoff — eval-gated releases + hot rollback
 
 ### Done

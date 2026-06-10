@@ -72,8 +72,13 @@ the large-spec campaign.
       promote/rollback as pointer swaps; gateway serves live releases via
       `ManifestSource` with hot promote/rollback (no restart);
       `pf release create/promote/rollback/list`.
-- [ ] `apps/web` dashboard: projects, source upload, graph review/curation UI,
-      eval reports, releases, audit viewer
+- [x] `apps/web` dashboard v1 (read-only, Next.js 15): overview with live
+      servers + eval gauges, per-project release timeline, release detail
+      (tool surface, gates, eval report, forced-override attribution), and
+      audit viewer with kind filters. Reads the file release store + audit
+      log directly — no DB yet.
+- [ ] Dashboard v2 (write paths): source upload, graph review/curation UI,
+      promote/rollback buttons — needs auth + the Postgres store first
 - [ ] Postgres control-plane store replacing the file release store (ADR-0005)
 - [ ] Credential vault (KMS-encrypted), per-tool scopes
 - [ ] OAuth 2.1 authorization on the gateway (MCP auth spec)
