@@ -9,17 +9,45 @@ export { AuditLog } from "./audit.js";
 export { executePlan, resolveBinding, envCredentialResolver } from "./executor.js";
 export { createMcpServerForManifest } from "./mcp.js";
 
-/** Load and validate one manifest file or every *.json in a directory. */
+/**
+ * Load and validate one manifest file or every *.json in a directory.
+ * Non-manifest JSON files in a directory (specs, graphs) are skipped with a
+ * warning; actual manifest validation failures name the offending file.
+ */
 export async function loadManifests(path: string): Promise<McpServerManifest[]> {
   const stats = await stat(path);
-  const files = stats.isDirectory()
+  const isDirectory = stats.isDirectory();
+  const files = isDirectory
     ? (await readdir(path)).filter((f) => f.endsWith(".json")).map((f) => join(path, f))
     : [path];
-  return Promise.all(
-    files.map(async (file) =>
-      McpServerManifest.parse(JSON.parse(await readFile(file, "utf8"))),
-    ),
-  );
+
+  const manifests: McpServerManifest[] = [];
+  for (const file of files) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await readFile(file, "utf8"));
+    } catch (error) {
+      throw new Error(`${file} is not valid JSON: ${error instanceof Error ? error.message : error}`);
+    }
+    const looksLikeManifest =
+      typeof parsed === "object" && parsed !== null && "manifestVersion" in parsed;
+    if (!looksLikeManifest) {
+      if (isDirectory) {
+        console.warn(`[gateway] skipping ${file} — no manifestVersion field (not a manifest)`);
+        continue;
+      }
+      throw new Error(`${file} is not an MCP server manifest (missing manifestVersion)`);
+    }
+    try {
+      manifests.push(McpServerManifest.parse(parsed));
+    } catch (error) {
+      throw new Error(`${file} failed manifest validation: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+  if (manifests.length === 0) {
+    throw new Error(`No valid manifests found at ${path}`);
+  }
+  return manifests;
 }
 
 const isMain = process.argv[1]?.replace(/\\/g, "/").endsWith("gateway/src/index.ts")

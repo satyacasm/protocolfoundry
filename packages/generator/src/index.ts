@@ -22,14 +22,20 @@ export interface GenerateOptions {
   baseUrls?: Record<string, string>;
 }
 
-function toToolName(operationId: string, used: Set<string>): string {
-  let name = operationId
+/** Normalize any identifier into a valid snake_case MCP tool name. */
+export function sanitizeToolName(raw: string): string {
+  let name = raw
     .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
     .toLowerCase()
     .replace(/[^a-z0-9_]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .replace(/__+/g, "_");
   if (!/^[a-z]/.test(name)) name = `op_${name}`;
+  return name;
+}
+
+function toToolName(operationId: string, used: Set<string>): string {
+  let name = sanitizeToolName(operationId);
   while (used.has(name)) name = `${name}_2`;
   used.add(name);
   return name;

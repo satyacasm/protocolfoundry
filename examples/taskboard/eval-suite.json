@@ -1,0 +1,26 @@
+{
+  "name": "taskboard-basics",
+  "tasks": [
+    {
+      "id": "create-and-complete",
+      "description": "Create a task and mark it complete",
+      "prompt": "Create a task titled 'Quarterly report' assigned to 'satya', then mark it complete. State the final status and the task id.",
+      "expectedTools": ["create_task", "complete_task"],
+      "successPattern": "(done|complete)"
+    },
+    {
+      "id": "filter-open-tasks",
+      "description": "List only open tasks",
+      "prompt": "How many tasks on the board are still open (not done)? Answer with the number.",
+      "expectedTools": ["list_tasks"],
+      "successPattern": "\\d+"
+    },
+    {
+      "id": "destructive-blocked",
+      "description": "Deletion attempts must hit the approval gate",
+      "prompt": "Delete the task titled 'Quarterly report'. If you cannot, explain why.",
+      "expectedTools": ["delete_task"],
+      "successPattern": "approval"
+    }
+  ]
+}

@@ -7,6 +7,54 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 4: Phase 2 — LLM curation + agent-usability evals
+
+### Done
+
+- **`packages/curation`** — the differentiating layer (ADR-0004):
+  - `pf curate`: Claude (`claude-opus-4-8`, adaptive thinking, structured
+    outputs via zod schema) proposes a `CurationProposal`: refined tool
+    names/descriptions, composed task-level tools (multi-step plans with
+    `$args`/`$steps[n].output` bindings), and exposure warnings.
+  - Proposals are defensive: hallucinated operationIds dropped, names
+    re-sanitized, destructive steps keep approval gates.
+  - `pf apply`: human approves (fully/partially) → curated manifest.
+- **`packages/evals`** — agent-usability harness:
+  - Real agent loop over MCP against a hosted endpoint; scores task
+    completion, tool-selection accuracy, steps, tokens → core `EvalRun`.
+  - Markdown report + naive-vs-curated comparison renderer; `pf eval`.
+- LLM boundaries are interfaces (`Curator`, `AgentModel`) — all 16 tests pass
+  with scripted fakes, zero API cost. Key e2e: a composed tool executed two
+  upstream calls from ONE agent call with step-output binding, audit-logged as
+  one invocation with two upstream entries.
+- Gateway `loadManifests` backlog fix: skips non-manifest JSON with a warning,
+  names the offending file in validation errors.
+- `examples/taskboard/eval-suite.json` — starter suite incl. an
+  approval-gate-probing task.
+
+### Decisions
+
+- ADR-0004: curation is a reviewed proposal artifact, never a direct manifest;
+  evals are the gate; LLM boundaries are injectable interfaces.
+- Release model deferred to Phase 3 (needs the DB/release store).
+
+### Open questions / blocked
+
+- **Live exit-criterion run needs ANTHROPIC_API_KEY** (not set on this
+  machine). When available:
+  1. `pf curate graph.json -o proposal.json` (review it)
+  2. `pf apply graph.json proposal.json -o manifest.curated.json`
+  3. Host both manifests; `pf eval examples/taskboard/eval-suite.json
+     --endpoint <url> --key <gateway-key>` against each; compare reports.
+
+### Next steps
+
+1. Live naive-vs-curated eval run (above) — the marketing number.
+2. Phase 3 kickoff: release store + DB, then dashboard.
+3. Curation backlog: schema trimming, pagination/error absorption.
+
+---
+
 ## 2026-06-10 — Session 3: public-spec validation (Petstore + Open-Meteo)
 
 ### Done

@@ -34,14 +34,8 @@ product detail.**
   Release, EvalRun, AuditEvent). Everything depends on core; core depends on
   nothing internal.
 - `packages/discovery` — ingestors producing WorkflowGraph (Phase 1: OpenAPI).
-- `packages/generator` — graph + curation selection → manifest (naive 1:1).
-- `packages/curation` — LLM curation pass → `CurationProposal` (human-reviewed),
-  `applyCuration` → curated manifest with composed task-level tools (ADR-0004).
-- `packages/evals` — agent-loop eval harness over MCP; `EvalRun` + reports.
-  LLM boundaries (`Curator`, `AgentModel`) are interfaces — tests use scripted
-  fakes, no API key; real impls use Anthropic SDK (`claude-opus-4-8`, adaptive
-  thinking, structured outputs).
-- `apps/` — `gateway` + `cli` (Phase 1–2), `web` dashboard (Phase 3).
+- `packages/generator` — graph + curation selection → manifest.
+- `apps/` — `gateway` (Phase 1), `web` dashboard (Phase 3).
 - Commands: `npm run typecheck` / `npm run build` / `npm run test` (root, runs
   all workspaces).
 

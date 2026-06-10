@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@protocolfoundry/core": "*",
+    "@protocolfoundry/curation": "*",
     "@protocolfoundry/discovery": "*",
+    "@protocolfoundry/evals": "*",
     "@protocolfoundry/generator": "*"
   }
 }

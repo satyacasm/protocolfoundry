@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    // Interop with the MCP/Anthropic SDK types, which aren't written for this flag.
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src"]
+}

@@ -39,16 +39,26 @@ with Claude against a real public spec.
 
 ## Phase 2 — Curation + evals (the differentiating layer)
 
-- [ ] LLM curation pass: compose TaskFlows into task-level tools, rewrite
-      descriptions, trim schemas, absorb pagination/errors
-- [ ] `packages/evals`: task-suite harness; score completion / tool-selection /
-      cost across agent models; eval report artifact
-- [ ] Release model: manifests are immutable, eval-gated, instantly roll-backable
-- [ ] Human-in-the-loop review: curation proposals approved/edited before release
-      (CLI or minimal web view)
+- [x] LLM curation pass (`packages/curation`): `pf curate` proposes refined
+      names/descriptions, composed task-level tools, and exposure warnings as a
+      reviewed `CurationProposal` artifact (ADR-0004). Claude `claude-opus-4-8`
+      with structured outputs; hallucinated operations dropped defensively.
+      Still open: schema trimming, pagination/error absorption.
+- [x] `packages/evals`: agent-loop harness over real MCP (completion,
+      tool-selection accuracy, steps, token cost) → `EvalRun` + markdown
+      report and naive-vs-curated comparison artifacts; `pf eval`.
+- [x] Human-in-the-loop review: `pf curate` → human reviews proposal →
+      `pf apply --refinements ... --composed ...` (partial approval supported);
+      compositions with destructive steps inherit the approval gate.
+- [ ] Release model (immutable, eval-gated, roll-backable) — deferred to
+      Phase 3 alongside the database (see ADR-0004 consequences).
+- [ ] **Live exit-criterion run**: curated vs naive on the same suite with a
+      real agent model (requires ANTHROPIC_API_KEY; harness + comparison
+      report are ready — see examples/taskboard/eval-suite.json).
 
 **Exit criterion:** curated server measurably beats the naive baseline on the same
-task suite — this number is the marketing.
+task suite — this number is the marketing. Harness verified with scripted
+agents; the live number needs an API key.
 
 ## Phase 3 — Product (dashboard + hosting business)
 

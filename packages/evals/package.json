@@ -1,25 +1,23 @@
 {
-  "name": "@protocolfoundry/gateway",
+  "name": "@protocolfoundry/evals",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/index.ts",
-    "start": "node dist/index.js"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@protocolfoundry/core": "*",
-    "express": "^5.1.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@protocolfoundry/curation": "*",
     "@protocolfoundry/discovery": "*",
-    "@protocolfoundry/generator": "*",
-    "@types/express": "^5.0.0"
+    "@protocolfoundry/gateway": "*",
+    "@protocolfoundry/generator": "*"
   }
 }

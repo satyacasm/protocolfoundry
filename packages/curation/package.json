@@ -1,0 +1,18 @@
+{
+  "name": "@protocolfoundry/curation",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
+    "@protocolfoundry/core": "*",
+    "@protocolfoundry/generator": "*",
+    "zod": "^3.24.0"
+  }
+}
