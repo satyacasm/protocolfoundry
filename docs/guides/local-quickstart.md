@@ -212,6 +212,13 @@ npm run dev -w @protocolfoundry/web
 Projects, release timelines with eval gauges, the exact tool surface agents
 see, full eval reports, and the audit log with approval-gate events.
 
+> **Prefer clicking to typing?** The dashboard's **Forge** page covers steps
+> 1–3 in the browser: upload the spec (or paste its URL), review/check the
+> operations, optionally run LLM curation and approve its proposals item by
+> item, and stage the release — then promote it from the project page.
+> Requires `PF_DASHBOARD_PASSWORD` (writes are disabled in open mode) and,
+> for the curation button, `ANTHROPIC_API_KEY` on the dashboard server.
+
 ## Troubleshooting
 
 | Symptom | Fix |

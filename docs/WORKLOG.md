@@ -7,6 +7,45 @@ honest and terse.
 
 ---
 
+## 2026-06-10 — Session 11: the Forge — curation review UI + source upload
+
+### Done
+
+- **`/forge`**: upload an OpenAPI spec (file or URL) + project id → ingest →
+  workspace; lists in-progress projects (ops count, proposal status).
+- **`/projects/<id>/curate`**: operation review table (checkboxes; delete
+  ops unchecked by default) → "Stage naive release"; "Run LLM curation"
+  button (disabled with a hint unless ANTHROPIC_API_KEY is set on the
+  dashboard server) → proposal review: warnings panel, refinements and
+  composed tools approved item-by-item via checkboxes → "Apply approved &
+  stage curated release". Server name + base-URL fields on both paths.
+- **Plumbing**: `lib/workspace.ts` (file workspace for graphs/proposals,
+  `PF_WORKSPACE_DIR`, gitignored); `lib/forge-actions.ts` server actions
+  (operator-gated, audit `manifestChange` events); `requireOperator`/
+  `appendAudit` moved out of the "use server" module into `lib/operator.ts`
+  (exported helpers in an action module would become public endpoints).
+- Releases staged from the forge carry `approvedBy: operator` and **no eval**
+  — the project page already flags this with the "no eval" chip, and flash
+  messages say "run pf eval before promoting".
+- Verified live end-to-end via form replay: spec file upload → 303 to curate
+  → ops listed → staged naive release v1 for `demoapp` with exactly the 3
+  checked tools (deleteTask excluded), base URL from the spec, audit event
+  recorded.
+
+### Notes
+
+- In-browser eval triggering is the missing piece of the loop (evals still
+  run via `pf eval`) — candidate for a later session alongside background
+  jobs, since eval runs take minutes.
+
+### Next steps
+
+1. OAuth 2.1 on the gateway; credential vault.
+2. Shiprocket decision: Postman ingestor (Phase 4 item) vs converter.
+3. Eval runs from the dashboard (needs a job runner).
+
+---
+
 ## 2026-06-10 — Session 10: audit events → Postgres + paginated viewer
 
 ### Done

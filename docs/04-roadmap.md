@@ -90,7 +90,12 @@ the large-spec campaign.
       backends behind one `AuditStore` interface, selected by `PF_DATABASE_URL`;
       gateway and dashboard write through it; audit viewer paginates with
       kind/project filters.
-- [ ] Dashboard v2b: curation review UI, source upload
+- [x] Dashboard v2b — the Forge: spec upload (file or URL) → ingest →
+      operation review with checkboxes → stage naive release, or run LLM
+      curation and approve refinements/composed tools per item → stage
+      curated release. Operator-gated; artifacts in a file workspace
+      (`PF_WORKSPACE_DIR`, Postgres with multi-tenant); audit
+      `manifestChange` events for every forge mutation.
 - [ ] Credential vault (KMS-encrypted), per-tool scopes
 - [ ] OAuth 2.1 authorization on the gateway (MCP auth spec)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME

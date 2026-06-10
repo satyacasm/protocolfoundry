@@ -15,4 +15,6 @@ Deployable applications (see docs/04-roadmap.md):
   Env: `PF_DATABASE_URL` (Postgres) or `PF_RELEASES_DIR` (file store),
   `PF_AUDIT_LOG` (gateway audit file), `PF_DASHBOARD_PASSWORD` (operator
   login; open mode with a banner when unset), optional `PF_DASHBOARD_SECRET`
-  (cookie signing key, defaults to the password).
+  (cookie signing key, defaults to the password), `PF_WORKSPACE_DIR` (forge
+  artifacts: ingested graphs + curation proposals, default `workspace/`),
+  `ANTHROPIC_API_KEY` (enables the Run LLM curation button).

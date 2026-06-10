@@ -600,6 +600,42 @@ td.desc {
   color: var(--ember-soft);
 }
 
+/* ---------- forge ---------- */
+
+input[type="checkbox"] {
+  accent-color: var(--ember);
+  width: 14px;
+  height: 14px;
+}
+
+.forge-form {
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+}
+
+.forge-actions {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.manifest-fields {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 12px;
+}
+
+.manifest-fields .gate-label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.manifest-fields .gate-input {
+  width: 100%;
+}
+
 /* ---------- write actions & flashes ---------- */
 
 .ver-link:hover {

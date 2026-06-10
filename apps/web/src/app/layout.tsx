@@ -37,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <nav>
               <Link href="/">Overview</Link>
+              <Link href="/forge">Forge</Link>
               <Link href="/audit">Audit log</Link>
               {authConfigured ? (
                 <form method="post" action="/api/logout" style={{ display: "inline" }}>
