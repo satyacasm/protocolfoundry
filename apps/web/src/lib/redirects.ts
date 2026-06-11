@@ -19,10 +19,17 @@ export function redirectTo(path: string, status: 302 | 303 | 307 = 303): NextRes
 /**
  * The origin the BROWSER is on, not the proxy-internal one. Middleware
  * (unlike route handlers) rejects relative Location headers, so redirects
- * there need an absolute URL — built from x-forwarded-* when behind a
- * proxy, falling back to the request's own origin in local dev.
+ * there need an absolute URL.
+ *
+ * Precedence: explicit configuration (PF_PUBLIC_URL, or RENDER_EXTERNAL_URL
+ * which Render sets on every service) so the host never derives from
+ * request headers in production; x-forwarded-*/Host only as a dev fallback
+ * — forwarded headers are attacker-influenceable on misconfigured proxies
+ * (open-redirect hardening).
  */
 export function externalUrl(request: NextRequest, path: string): URL {
+  const configured = process.env.PF_PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL;
+  if (configured) return new URL(path, configured);
   const proto =
     request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
     request.nextUrl.protocol.replace(":", "");
