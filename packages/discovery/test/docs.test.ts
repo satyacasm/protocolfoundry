@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertPublicHttpUrl,
   buildExtractionPrompt,
   findSpecCandidates,
   graphFromExtraction,
@@ -20,6 +21,9 @@ const OPENAPI_SPEC = JSON.stringify({
     },
   },
 });
+
+// every test hostname "resolves" to a public address
+const publicLookup = async () => [{ address: "203.0.113.10", family: 4 }];
 
 function fakeFetch(routes: Record<string, { body: string; status?: number }>): typeof fetch {
   return (async (input: RequestInfo | URL) => {
@@ -119,7 +123,7 @@ describe("graphFromExtraction", () => {
 describe("ingestUrl", () => {
   it("ingests a machine-readable spec URL directly", async () => {
     const graph = await ingestUrl("https://api.example.com/openapi.json", "proj", {
-      fetchFn: fakeFetch({ "https://api.example.com/openapi.json": { body: OPENAPI_SPEC } }),
+      lookupFn: publicLookup, fetchFn: fakeFetch({ "https://api.example.com/openapi.json": { body: OPENAPI_SPEC } }),
     });
     expect(graph.operations.map((op) => op.id)).toEqual(["listOrders"]);
   });
@@ -128,7 +132,7 @@ describe("ingestUrl", () => {
     const html = `<html><body><h1>Docs</h1>
       <script>SwaggerUIBundle({ url: "/openapi.json" })</script></body></html>`;
     const graph = await ingestUrl("https://docs.example.com/api", "proj", {
-      fetchFn: fakeFetch({
+      lookupFn: publicLookup, fetchFn: fakeFetch({
         "https://docs.example.com/api": { body: html },
         "https://docs.example.com/openapi.json": { body: OPENAPI_SPEC },
       }),
@@ -152,7 +156,7 @@ describe("ingestUrl", () => {
       },
     };
     const graph = await ingestUrl("https://docs.example.com/reference", "proj", {
-      fetchFn: fakeFetch({ "https://docs.example.com/reference": { body: html } }),
+      lookupFn: publicLookup, fetchFn: fakeFetch({ "https://docs.example.com/reference": { body: html } }),
       extractor,
     });
     expect(graph.operations).toHaveLength(1);
@@ -166,15 +170,84 @@ describe("ingestUrl", () => {
     const html = `<html><body><h1>Docs</h1><p>${"endpoint reference text ".repeat(30)}</p></body></html>`;
     await expect(
       ingestUrl("https://docs.example.com/api", "proj", {
-        fetchFn: fakeFetch({ "https://docs.example.com/api": { body: html } }),
+        lookupFn: publicLookup, fetchFn: fakeFetch({ "https://docs.example.com/api": { body: html } }),
       }),
     ).rejects.toThrow(/ANTHROPIC_API_KEY/);
   });
 
   it("propagates HTTP failures", async () => {
     await expect(
-      ingestUrl("https://docs.example.com/missing", "proj", { fetchFn: fakeFetch({}) }),
+      ingestUrl("https://docs.example.com/missing", "proj", { lookupFn: publicLookup, fetchFn: fakeFetch({}) }),
     ).rejects.toThrow(/HTTP 404/);
+  });
+});
+
+describe("SSRF guard", () => {
+  it("rejects non-http schemes, localhost, and private/metadata IPs", async () => {
+    await expect(assertPublicHttpUrl("file:///etc/passwd")).rejects.toThrow(/http/);
+    await expect(assertPublicHttpUrl("http://localhost:3001/")).rejects.toThrow(/internal/);
+    await expect(assertPublicHttpUrl("http://127.0.0.1/")).rejects.toThrow(/private/);
+    await expect(assertPublicHttpUrl("http://169.254.169.254/latest/meta-data")).rejects.toThrow(/private/);
+    await expect(assertPublicHttpUrl("http://10.2.3.4/")).rejects.toThrow(/private/);
+    await expect(assertPublicHttpUrl("http://192.168.1.1/")).rejects.toThrow(/private/);
+    await expect(assertPublicHttpUrl("http://[::1]/")).rejects.toThrow(/private/);
+  });
+
+  it("rejects hostnames that resolve to private addresses", async () => {
+    const internalLookup = async () => [{ address: "10.0.0.5", family: 4 }];
+    await expect(assertPublicHttpUrl("https://internal.evil.example", internalLookup)).rejects.toThrow(
+      /resolves to private/,
+    );
+  });
+
+  it("accepts hostnames resolving publicly", async () => {
+    const url = await assertPublicHttpUrl("https://docs.example.com/api", publicLookup);
+    expect(url.hostname).toBe("docs.example.com");
+  });
+
+  it("blocks ingestUrl from fetching a private target", async () => {
+    await expect(
+      ingestUrl("http://169.254.169.254/latest/meta-data", "proj", {
+        lookupFn: publicLookup,
+        fetchFn: fakeFetch({ "http://169.254.169.254/latest/meta-data": { body: "secrets" } }),
+      }),
+    ).rejects.toThrow(/private/);
+  });
+
+  it("skips autodiscovered spec candidates pointing at private hosts", async () => {
+    // page is public, but names an internal spec URL — it must be skipped,
+    // falling through to the no-extractor error rather than fetching it
+    const html = `<html><body><h1>Docs</h1>
+      <p>${"endpoint reference text ".repeat(30)}</p>
+      <a href="http://127.0.0.1:8080/openapi.json">spec</a></body></html>`;
+    const fetched: string[] = [];
+    const spyFetch: typeof fetch = (async (input: RequestInfo | URL) => {
+      fetched.push(String(input));
+      if (String(input) === "https://docs.example.com/api") return new Response(html);
+      return new Response(OPENAPI_SPEC);
+    }) as typeof fetch;
+    await expect(
+      ingestUrl("https://docs.example.com/api", "proj", {
+        lookupFn: publicLookup,
+        fetchFn: spyFetch,
+      }),
+    ).rejects.toThrow(/ANTHROPIC_API_KEY/);
+    expect(fetched).toEqual(["https://docs.example.com/api"]);
+  });
+
+  it("re-validates redirect hops", async () => {
+    const redirectFetch: typeof fetch = (async (input: RequestInfo | URL) => {
+      if (String(input) === "https://docs.example.com/spec.json") {
+        return new Response(null, { status: 302, headers: { location: "http://127.0.0.1/secrets" } });
+      }
+      return new Response("should never get here");
+    }) as typeof fetch;
+    await expect(
+      ingestUrl("https://docs.example.com/spec.json", "proj", {
+        lookupFn: publicLookup,
+        fetchFn: redirectFetch,
+      }),
+    ).rejects.toThrow(/private/);
   });
 });
 

@@ -1,4 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { lookup as dnsLookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { z } from "zod";
 import { AuthRequirement, Operation, WorkflowGraph } from "@protocolfoundry/core";
 import { ingestSource } from "./source.js";
@@ -22,6 +24,124 @@ import { ingestSource } from "./source.js";
  * blocks robots, the customer must provide the spec instead — we never
  * circumvent (ADR-0002).
  */
+
+/* ------------------------------------------------------------------ */
+/* SSRF guard                                                          */
+/* ------------------------------------------------------------------ */
+
+export type LookupFn = (
+  hostname: string,
+) => Promise<Array<{ address: string; family: number }>>;
+
+const defaultLookup: LookupFn = async (hostname) =>
+  dnsLookup(hostname, { all: true, verbatim: true });
+
+function isPrivateIPv4(address: string): boolean {
+  const parts = address.split(".").map(Number);
+  const [a, b] = [parts[0]!, parts[1]!];
+  return (
+    a === 0 || // 0.0.0.0/8 ("this host")
+    a === 10 || // 10/8
+    a === 127 || // loopback
+    (a === 100 && b >= 64 && b <= 127) || // 100.64/10 CGNAT
+    (a === 169 && b === 254) || // link-local incl. cloud metadata
+    (a === 172 && b >= 16 && b <= 31) || // 172.16/12
+    (a === 192 && b === 168) || // 192.168/16
+    (a === 192 && b === 0) || // 192.0.0/24 special-purpose
+    (a === 198 && (b === 18 || b === 19)) || // benchmarking
+    a >= 224 // multicast + reserved
+  );
+}
+
+function isPrivateAddress(address: string): boolean {
+  const v4 = address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)?.[1];
+  if (v4) return isPrivateIPv4(v4);
+  if (isIP(address) === 4) return isPrivateIPv4(address);
+  const lower = address.toLowerCase();
+  return (
+    lower === "::" ||
+    lower === "::1" ||
+    lower.startsWith("fe8") || // fe80::/10 link-local (fe80–febf)
+    lower.startsWith("fe9") ||
+    lower.startsWith("fea") ||
+    lower.startsWith("feb") ||
+    lower.startsWith("fc") || // fc00::/7 unique-local
+    lower.startsWith("fd")
+  );
+}
+
+/**
+ * Reject URLs an ingest fetch must never reach: non-http(s) schemes,
+ * localhost-style hostnames, and anything resolving to loopback, link-local
+ * (incl. cloud metadata), or private ranges. Applied to the user-supplied
+ * URL, every autodiscovered spec candidate, and every redirect hop — these
+ * all reach the server-side fetcher (SSRF surface).
+ */
+export async function assertPublicHttpUrl(raw: string, lookupFn: LookupFn = defaultLookup): Promise<URL> {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`Not a valid URL: ${raw}`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`Only http(s) URLs can be ingested (got ${url.protocol}//)`);
+  }
+  const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host === ""
+  ) {
+    throw new Error(`Refusing to fetch internal hostname "${host}"`);
+  }
+  if (isIP(host)) {
+    if (isPrivateAddress(host)) throw new Error(`Refusing to fetch private address ${host}`);
+    return url;
+  }
+  let resolved: Array<{ address: string; family: number }>;
+  try {
+    resolved = await lookupFn(host);
+  } catch {
+    throw new Error(`Could not resolve hostname "${host}"`);
+  }
+  if (resolved.length === 0) throw new Error(`Could not resolve hostname "${host}"`);
+  for (const { address } of resolved) {
+    if (isPrivateAddress(address)) {
+      throw new Error(`Refusing to fetch ${host} — it resolves to private address ${address}`);
+    }
+  }
+  return url;
+}
+
+/**
+ * Fetch with the SSRF guard on the initial URL and on EVERY redirect hop
+ * (redirects are followed manually so a public host can't bounce us to an
+ * internal one). Note: a determined DNS-rebinding attacker could still race
+ * the check; the gateway/network layer is the backstop for that.
+ */
+async function safeFetch(
+  rawUrl: string,
+  fetchFn: typeof fetch,
+  lookupFn: LookupFn,
+  maxRedirects = 5,
+): Promise<Response> {
+  let current = rawUrl;
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    await assertPublicHttpUrl(current, lookupFn);
+    const response = await fetchFn(current, { headers: FETCH_HEADERS, redirect: "manual" });
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) return response;
+      current = new URL(location, current).toString();
+      continue;
+    }
+    return response;
+  }
+  throw new Error(`Too many redirects fetching ${rawUrl}`);
+}
 
 /* ------------------------------------------------------------------ */
 /* stage 1: spec autodiscovery                                         */
@@ -345,6 +465,8 @@ export function graphFromExtraction(
 export interface IngestUrlOptions {
   /** Injected for tests; defaults to global fetch. */
   fetchFn?: typeof fetch;
+  /** Injected for tests; defaults to dns.lookup (SSRF guard). */
+  lookupFn?: LookupFn;
   /** Needed only when the page has no discoverable machine-readable spec. */
   extractor?: DocsExtractor;
   log?: (message: string) => void;
@@ -366,10 +488,11 @@ export async function ingestUrl(
   options: IngestUrlOptions = {},
 ): Promise<WorkflowGraph> {
   const fetchFn = options.fetchFn ?? fetch;
+  const lookupFn = options.lookupFn ?? defaultLookup;
   const log = options.log ?? (() => {});
   const sourceId = `url:${url}`;
 
-  const response = await fetchFn(url, { headers: FETCH_HEADERS });
+  const response = await safeFetch(url, fetchFn, lookupFn);
   if (!response.ok) throw new Error(`Fetching ${url} failed: HTTP ${response.status}`);
   const raw = await response.text();
 
@@ -382,7 +505,9 @@ export async function ingestUrl(
   // stage 1: a linked machine-readable spec beats scraping every time
   for (const candidate of findSpecCandidates(raw, url)) {
     try {
-      const specResponse = await fetchFn(candidate, { headers: FETCH_HEADERS });
+      // safeFetch re-validates: page content names the candidates, so they
+      // are attacker-controllable even when the page URL itself is fine.
+      const specResponse = await safeFetch(candidate, fetchFn, lookupFn);
       if (!specResponse.ok) continue;
       const specRaw = await specResponse.text();
       if (looksLikeHtml(specRaw)) continue;

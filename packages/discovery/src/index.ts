@@ -5,6 +5,7 @@ export { ingestOpenApi, parseOpenApiDocument } from "./openapi.js";
 export { inferSchema, ingestPostman, isPostmanCollection } from "./postman.js";
 export { ingestSource } from "./source.js";
 export {
+  assertPublicHttpUrl,
   buildExtractionPrompt,
   createAnthropicDocsExtractor,
   findSpecCandidates,
@@ -15,6 +16,7 @@ export {
   RawDocsExtraction,
   type DocsExtractor,
   type IngestUrlOptions,
+  type LookupFn,
 } from "./docs.js";
 
 /**

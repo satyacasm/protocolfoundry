@@ -20,8 +20,14 @@ no anti-bot circumvention, only apps the customer owns/is authorized for).
 `ingestUrl(url, projectId, options)` in `packages/discovery` (`docs.ts`),
 shared by `pf ingest <url>` and the Forge's URL field:
 
-1. **Fetch** with a plain, honestly identified HTTP GET. If the response is a
-   spec (JSON/YAML), ingest it exactly as before.
+1. **Fetch** with a plain, honestly identified HTTP GET, behind an **SSRF
+   guard** (`assertPublicHttpUrl`): http(s) only, localhost-style hostnames
+   rejected, DNS-resolved addresses checked against loopback/link-local
+   (incl. cloud metadata)/private/CGNAT ranges, redirects followed manually
+   with every hop re-validated. The guard applies to the user-supplied URL
+   AND every autodiscovered candidate (page content is attacker-
+   controllable). If the response is a spec (JSON/YAML), ingest it exactly
+   as before.
 2. **Spec autodiscovery** (HTML responses): scan for machine-readable spec
    references — swagger-ui/redoc config URLs, spec-ish `.json`/`.yaml` links,
    absolute spec URLs in inline JS — resolve them against the page URL and
