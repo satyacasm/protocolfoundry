@@ -35,7 +35,8 @@ product detail.**
 - `packages/core` — domain types + zod schemas (WorkflowGraph, McpServerManifest,
   Release, EvalRun, AuditEvent). Everything depends on core; core depends on
   nothing internal.
-- `packages/discovery` — ingestors producing WorkflowGraph (Phase 1: OpenAPI).
+- `packages/discovery` — ingestors producing WorkflowGraph (OpenAPI, Postman,
+  docs-page URLs via spec autodiscovery + LLM extraction — ADR-0010).
 - `packages/generator` — graph + curation selection → manifest (naive 1:1).
 - `packages/curation` — LLM curation pass → `CurationProposal` (human-reviewed),
   `applyCuration` → curated manifest with composed task-level tools (ADR-0004).

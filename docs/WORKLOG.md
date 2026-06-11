@@ -7,6 +7,41 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 17: docs-page ingestion (ADR-0010)
+
+### Done
+
+- **`pf ingest <url>` / Forge URL field now accept SaaS API-documentation
+  pages**, not just machine-readable specs. New `packages/discovery/src/docs.ts`
+  (`ingestUrl`), shared by CLI and Forge:
+  1. spec autodiscovery in the HTML (swagger-ui/redoc configs, spec-ish
+     links) — deterministic, no LLM;
+  2. fallback: `DocsExtractor` LLM boundary (interface like `Curator`;
+     scripted fakes in tests, real `createAnthropicDocsExtractor` with
+     structured outputs) extracts documented endpoints → validated →
+     `WorkflowGraph` (dedupe per method+path, path placeholders forced to
+     required inputs, effect from method, auth requirement carried).
+- Extraction lands in the normal curation/review pipeline — hallucinated
+  endpoints die at human review; the eval gate stays the backstop.
+- `Source.kind "docsUrl"` is finally implemented. Plain authenticated-free
+  fetch only, honest UA, no anti-bot circumvention (ADR-0002).
+- 10 new tests (57 total green): autodiscovery, relative resolution,
+  HTML→text, extraction→graph assembly, both ingestUrl paths, error
+  messages. CLAUDE.md / architecture / quickstart synced.
+
+### Decisions
+
+- ADR-0010: autodiscovery before LLM; no headless browser for
+  client-rendered docs apps (clear failure message instead) — a rendering
+  crawler is a separate later decision.
+
+### Next steps
+
+- Try `pf ingest` against a few real SaaS docs sites from a network-open
+  environment; tune `findSpecCandidates` patterns with what we learn.
+
+---
+
 ## 2026-06-11 — Session 16: dashboard redesign — "porcelain" design language
 
 ### Done

@@ -87,7 +87,9 @@ This is the single most important early architecture choice — it is what makes
   `@modelcontextprotocol/sdk`; one fresh Server+Transport pair per request.
 - `apps/cli` — `pf ingest` / `pf generate`, the Phase 1 CLI-first interface.
 - `packages/core` — shared domain types + validation (zod).
-- `packages/discovery` — ingestors + LLM graph analysis (Claude via Anthropic SDK).
+- `packages/discovery` — ingestors + LLM graph analysis (Claude via Anthropic
+  SDK). Implemented: OpenAPI, Postman, docs-page URLs (spec autodiscovery →
+  LLM extraction fallback, ADR-0010).
 - `packages/generator` — graph → manifest.
 - `packages/evals` — agent-loop harness.
 - Postgres (likely Neon/Supabase). Eval runs triggered from the dashboard
@@ -96,5 +98,6 @@ This is the single most important early architecture choice — it is what makes
 - Deploy: long-lived Node hosts for BOTH the gateway (MCP sessions, SSE
   streams) and `apps/web` (in-process eval jobs continue after the response —
   serverless would kill them). Hosted on Render via the root `render.yaml`
-  blueprint: dev + prod environments, branch-per-environment auto-deploy
-  (ADR-0009, `docs/guides/deployment.md`).
+  blueprint: currently the free single-environment test mode deploying from
+  `main`; the full dev/prod branch-per-environment layout is staged in
+  `render.paid.yaml` (ADR-0009, `docs/guides/deployment.md`).

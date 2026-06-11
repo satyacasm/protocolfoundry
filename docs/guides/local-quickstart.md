@@ -38,6 +38,9 @@ npm run dev -w @protocolfoundry/cli -- <command> <args>
 Given a URL like `https://app.example.com`, the spec is usually at one of:
 
 - `https://app.example.com/openapi.json` (or `/openapi.yaml`)
+- the URL of the app's API documentation page — `pf ingest` auto-discovers a
+  linked spec, or AI-extracts the documented endpoints (needs
+  `ANTHROPIC_API_KEY`) — ADR-0010
 - `https://app.example.com/swagger.json` / `/api-docs` / `/v3/api-docs`
 - linked from the API docs page, or exported from your framework
   (FastAPI: `/openapi.json`; NestJS/Spring/Rails grape-swagger all generate one)
