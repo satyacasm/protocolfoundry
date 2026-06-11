@@ -14,3 +14,4 @@ coverage/
 # local design-preview artifacts
 .playwright-mcp/
 theme-*.png
+shot-*.png
