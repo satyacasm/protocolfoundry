@@ -23,9 +23,9 @@ export function redirectTo(path: string, status: 302 | 303 | 307 = 303): NextRes
  *
  * Precedence: explicit configuration (PF_PUBLIC_URL, or RENDER_EXTERNAL_URL
  * which Render sets on every service) so the host never derives from
- * request headers in production; x-forwarded-*/Host only as a dev fallback
- * — forwarded headers are attacker-influenceable on misconfigured proxies
- * (open-redirect hardening).
+ * request headers in production; x-forwarded-proto/host and Host are only
+ * a dev fallback — forwarded headers are attacker-influenceable on
+ * misconfigured proxies (open-redirect hardening).
  */
 export function externalUrl(request: NextRequest, path: string): URL {
   const configured = process.env.PF_PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL;
