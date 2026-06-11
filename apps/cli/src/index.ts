@@ -31,10 +31,12 @@ Usage:
       Generate a naive (1:1) MCP server manifest. Defaults to ALL operations;
       use --select for the human-in-the-loop subset.
 
-  pf curate <graph.json> [--select <op1,op2,...>] [--model <id>] [-o <proposal.json>]
+  pf curate <graph.json> [--select <op1,op2,...>] [--model haiku|sonnet|opus|fable|<id>]
+            [-o <proposal.json>]
       LLM curation pass: propose agent-friendly tool names/descriptions and
       composed task-level tools. Requires ANTHROPIC_API_KEY. Review the
-      proposal before applying it.
+      proposal before applying it. --model takes an alias (haiku, sonnet,
+      opus, fable) or a full Claude model id; default haiku.
 
   pf apply <graph.json> <proposal.json> [--refinements <op1,...>|all]
            [--composed <name1,...>|all] [--name <serverName>] [--base-url <url>]
@@ -43,10 +45,11 @@ Usage:
       Defaults to accepting everything (review the proposal first!).
 
   pf eval <suite.json> --endpoint <mcp-url> [--key <gateway-key>]
-          [--model <id>] [--manifest-ref <ref>] [--project <id>]
+          [--model haiku|sonnet|opus|fable|<id>] [--manifest-ref <ref>] [--project <id>]
           [-o <evalrun.json>] [--report <report.md>]
       Run an agent-usability eval suite against a hosted MCP endpoint.
-      Requires ANTHROPIC_API_KEY.
+      Requires ANTHROPIC_API_KEY. --model takes an alias (haiku, sonnet,
+      opus, fable) or a full Claude model id; default haiku.
 
   pf release create <manifest.json> [--eval <evalrun.json>]
              [--min-completion 0.8] [--min-selection 0.8]

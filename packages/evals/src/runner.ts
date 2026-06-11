@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
-import { EvalRun, type EvalTaskResult } from "@protocolfoundry/core";
+import { EvalRun, resolveClaudeModel, type EvalTaskResult } from "@protocolfoundry/core";
 
 /** One realistic task an agent should be able to complete via the server. */
 export interface EvalTask {
@@ -77,11 +77,16 @@ const AGENT_SYSTEM_PROMPT =
   "You are an autonomous agent completing a task using the available tools. " +
   "Use tools as needed, then state the final outcome plainly, including any ids or values produced.";
 
-/** Claude-backed agent loop participant. Requires ANTHROPIC_API_KEY. */
+/**
+ * Claude-backed agent loop participant. Requires ANTHROPIC_API_KEY.
+ * Accepts a friendly alias ("haiku" | "sonnet" | "opus" | "fable") or a full
+ * model ID; defaults to haiku.
+ */
 export function createAnthropicAgent(
-  model = "claude-sonnet-4-6",
+  modelOrAlias?: string,
   options: { adaptiveThinking?: boolean } = {},
 ): AgentModel {
+  const model = resolveClaudeModel(modelOrAlias);
   const client = new Anthropic();
   const adaptive = options.adaptiveThinking ?? true;
   return {
@@ -91,7 +96,13 @@ export function createAnthropicAgent(
         model,
         max_tokens: 16000,
         ...(adaptive ? { thinking: { type: "adaptive" as const } } : {}),
-        system: AGENT_SYSTEM_PROMPT,
+        system: [
+          {
+            type: "text",
+            text: AGENT_SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages,
         tools: tools.map((t) => ({
           name: t.name,

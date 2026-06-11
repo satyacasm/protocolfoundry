@@ -107,9 +107,15 @@ export default async function ProjectPage({
                     </form>
                   ) : null}
                   {canRunEval && (release.status === "staged" || release.status === "live") ? (
-                    <form action={runEval}>
+                    <form action={runEval} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                       <input type="hidden" name="projectId" value={projectId} />
                       <input type="hidden" name="version" value={release.version} />
+                      <select name="model" className="model-select" defaultValue="haiku" aria-label="Eval model">
+                        <option value="haiku">haiku</option>
+                        <option value="sonnet">sonnet</option>
+                        <option value="opus">opus</option>
+                        <option value="fable">fable</option>
+                      </select>
                       <button type="submit" className="action-button">
                         {evalRun ? "Re-run eval" : "Run eval"}
                       </button>

@@ -4,6 +4,11 @@ import { tmpdir } from "node:os";
 import type { Server as HttpServer } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
+import {
+  DEFAULT_CLAUDE_MODEL,
+  isClaudeModelAlias,
+  resolveClaudeModel,
+} from "@protocolfoundry/core";
 import { ingestOpenApi } from "@protocolfoundry/discovery";
 import { generateManifest } from "@protocolfoundry/generator";
 import { AuditLog, createGatewayApp } from "@protocolfoundry/gateway";
@@ -170,5 +175,24 @@ describe("runEvalSuite", () => {
       candidate: "curated",
     });
     expect(comparison).toContain("+100pp");
+  });
+});
+
+describe("model aliases", () => {
+  it("resolves haiku/sonnet/opus to exact Claude model ids", () => {
+    expect(resolveClaudeModel("haiku")).toBe("claude-haiku-4-5");
+    expect(resolveClaudeModel("sonnet")).toBe("claude-sonnet-4-6");
+    expect(resolveClaudeModel("opus")).toBe("claude-opus-4-8");
+  });
+
+  it("defaults to haiku and passes full model ids through", () => {
+    expect(resolveClaudeModel(undefined)).toBe(DEFAULT_CLAUDE_MODEL);
+    expect(DEFAULT_CLAUDE_MODEL).toBe("claude-haiku-4-5");
+    expect(resolveClaudeModel("claude-opus-4-7")).toBe("claude-opus-4-7");
+  });
+
+  it("guards dashboard input via isClaudeModelAlias", () => {
+    expect(isClaudeModelAlias("opus")).toBe(true);
+    expect(isClaudeModelAlias("gpt-4")).toBe(false);
   });
 });

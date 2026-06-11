@@ -5,6 +5,7 @@ import {
   CurationProposal,
   ExposureWarning,
   ToolRefinement,
+  resolveClaudeModel,
   type WorkflowGraph,
 } from "@protocolfoundry/core";
 
@@ -134,12 +135,9 @@ export function summarizeGraphForPrompt(
   return JSON.stringify(ops, null, 2);
 }
 
-export function buildCurationPrompt(graph: WorkflowGraph, operationIds: string[]): string {
-  return `You are curating an MCP (Model Context Protocol) server generated from an API so that AI agents can use it successfully. Naive one-tool-per-endpoint servers fail agents: vague names, doc-dump descriptions, and missing task-level operations cause wrong tool selection and incomplete tasks.
-
-Here are the operations selected for exposure (JSON):
-
-${summarizeGraphForPrompt(graph, operationIds)}
+/** Static curation instructions — cached as the system block across all curate calls. */
+export const CURATION_SYSTEM_PROMPT =
+  `You are curating an MCP (Model Context Protocol) server generated from an API so that AI agents can use it successfully. Naive one-tool-per-endpoint servers fail agents: vague names, doc-dump descriptions, and missing task-level operations cause wrong tool selection and incomplete tasks.
 
 Produce:
 
@@ -150,13 +148,22 @@ Produce:
 3. "warnings" — operations whose exposure to agents deserves human scrutiny (destructive, bulk, billing, or auth-sensitive), with the reason.
 
 Rules:
-- Use ONLY operationIds from the list above.
+- Use ONLY operationIds from the list provided in the user message.
 - Binding expressions must reference output fields that actually exist in outputFields.
 - Tool names must be unique across refinements and composedTools.`;
+
+/** Returns the user message for a curation call: the selected operations as JSON. */
+export function buildCurationPrompt(graph: WorkflowGraph, operationIds: string[]): string {
+  return `Here are the operations selected for exposure (JSON):\n\n${summarizeGraphForPrompt(graph, operationIds)}`;
 }
 
-/** Real Claude-backed curator. Requires ANTHROPIC_API_KEY in the environment. */
-export function createAnthropicCurator(model = "claude-sonnet-4-6"): Curator {
+/**
+ * Real Claude-backed curator. Requires ANTHROPIC_API_KEY in the environment.
+ * Accepts a friendly alias ("haiku" | "sonnet" | "opus" | "fable") or a full
+ * model ID; defaults to haiku.
+ */
+export function createAnthropicCurator(modelOrAlias?: string): Curator {
+  const model = resolveClaudeModel(modelOrAlias);
   const client = new Anthropic();
   return {
     model,
@@ -165,6 +172,13 @@ export function createAnthropicCurator(model = "claude-sonnet-4-6"): Curator {
         model,
         max_tokens: 16000,
         thinking: { type: "adaptive" },
+        system: [
+          {
+            type: "text",
+            text: CURATION_SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages: [{ role: "user", content: prompt }],
         output_config: {
           format: { type: "json_schema", schema: RAW_PROPOSAL_JSON_SCHEMA },

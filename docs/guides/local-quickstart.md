@@ -192,6 +192,16 @@ npm run dev -w @protocolfoundry/cli -- eval suite.json --endpoint http://localho
 You get task completion %, tool-selection accuracy, steps, and token cost per
 task. This is the number that gates releases.
 
+Both LLM-powered commands (`pf curate`, `pf eval`) take `--model` with a
+friendly alias — `haiku` (fastest/cheapest), `sonnet` (default), or `opus`
+(most capable) — or any full Claude model id:
+
+```powershell
+npm run dev -w @protocolfoundry/cli -- eval suite.json --endpoint http://localhost:3001/mcp/myapp --model haiku
+```
+
+The dashboard has the same selector next to the **Run eval** button.
+
 ## 7. Release it properly (versioned, gated, roll-backable)
 
 ```powershell

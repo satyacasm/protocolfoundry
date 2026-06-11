@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isClaudeModelAlias, resolveClaudeModel } from "@protocolfoundry/core";
 import { generateCoverageSuite, parseEvalSuite } from "@protocolfoundry/evals";
 import { store } from "./data";
 import { startEvalJob } from "./eval-jobs";
@@ -82,6 +83,7 @@ export async function generateSuiteFromManifest(formData: FormData): Promise<voi
 export async function runEval(formData: FormData): Promise<void> {
   const projectId = String(formData.get("projectId") ?? "");
   const version = Number(formData.get("version") ?? 0);
+  const modelAlias = String(formData.get("model") ?? "haiku");
   const back = `/projects/${projectId}`;
   let actor: string;
   try {
@@ -89,8 +91,13 @@ export async function runEval(formData: FormData): Promise<void> {
   } catch (error) {
     fail(back, error instanceof Error ? error.message : String(error));
   }
+  if (!isClaudeModelAlias(modelAlias)) {
+    fail(back, `Unknown model "${modelAlias}" — pick haiku, sonnet, opus, or fable`);
+  }
   try {
-    const { done } = await startEvalJob(projectId, version, actor);
+    const { done } = await startEvalJob(projectId, version, actor, {
+      model: resolveClaudeModel(modelAlias),
+    });
     // Fire and forget: the job persists its own progress/outcome; the page
     // polls the job file. Swallow here so an unhandled rejection can't crash
     // the server — failures land in the job state.

@@ -854,6 +854,30 @@ input[type="checkbox"] {
   background: rgba(224, 91, 91, 0.2);
 }
 
+.model-select {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  cursor: pointer;
+  background: rgba(255, 122, 31, 0.04);
+  border: 1px solid var(--line-bright);
+  color: var(--ember-soft);
+  transition: border-color 140ms ease;
+}
+
+.model-select:hover,
+.model-select:focus {
+  border-color: rgba(255, 122, 31, 0.5);
+  outline: none;
+}
+
+.model-select option {
+  background: var(--bg-raised);
+  color: var(--ember-soft);
+}
+
 .flash {
   font-family: var(--font-mono);
   font-size: 12px;

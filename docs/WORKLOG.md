@@ -7,6 +7,76 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 19: Haiku default, prompt caching, fable alias
+
+### Done
+
+- **`packages/core/src/models.ts`**: Added `fable` → `claude-fable-5` alias;
+  changed `DEFAULT_CLAUDE_MODEL` from `claude-sonnet-4-6` to `claude-haiku-4-5`
+  to lower operating costs.
+- **`packages/curation/src/propose.ts`**: Extracted `CURATION_SYSTEM_PROMPT`
+  constant (the static curation instructions). `buildCurationPrompt` now returns
+  only the dynamic operations JSON (user message). `createAnthropicCurator` passes
+  the system prompt as a `system` block with `cache_control: { type: "ephemeral" }`
+  so repeated curation calls against the same API hit the cache for the
+  instructions portion (~0.1× base input price on cache reads).
+- **`packages/evals/src/runner.ts`**: Converted `system` string to an array
+  block with `cache_control: { type: "ephemeral" }` in `createAnthropicAgent`.
+- **`apps/web`**: `<select>` for eval model now defaults to `haiku`; `fable`
+  option added. `runEval` server action default and error message updated.
+- **`apps/cli`**: USAGE text for `pf curate` and `pf eval` updated to list
+  `fable` as an alias and show `haiku` as the default.
+- **Tests**: updated "defaults to sonnet" assertion → "defaults to haiku"; all
+  59 tests pass.
+
+### Decisions
+
+- System block caching: the curation instructions are the stable portion; the
+  per-API operations JSON is the variable part (user message). Cache hit requires
+  ≥2048 tokens before the marker for Haiku 4.5 — small suites won't cache, but
+  real-world APIs with dozens of operations will.
+- `fable` alias is wired end-to-end but note that `claude-fable-5` has no
+  `budget_tokens` thinking and returns a 400 if `thinking` is set to anything
+  other than `adaptive` or omitted — the current `{ type: "adaptive" }` is
+  compatible.
+
+### Open questions
+
+- Haiku 4.5 + adaptive thinking + structured output: if Haiku 4.5 rejects
+  `thinking: { type: "adaptive" }` in practice, add a model-aware guard that
+  omits the thinking param for Haiku.
+
+---
+
+## 2026-06-11 — Session 18: Model switcher (haiku/sonnet/opus) in dashboard + CLI
+
+### Done
+
+- **Model aliases in @protocolfoundry/core** (`models.ts`): `haiku` →
+  `claude-haiku-4-5`, `sonnet` → `claude-sonnet-4-6` (default, unchanged),
+  `opus` → `claude-opus-4-8`. `resolveClaudeModel()` resolves aliases and
+  passes full `claude-*` ids through; `isClaudeModelAlias()` guards
+  user-supplied input. Lives in core so evals and curation share one map.
+- `createAnthropicAgent` (evals) and `createAnthropicCurator` (curation)
+  now accept an alias or full id — CLI `--model haiku|sonnet|opus|<id>`
+  works for both `pf curate` and `pf eval` with no parser change (usage
+  text updated).
+- Dashboard: model `<select>` (haiku/sonnet/opus, default sonnet) next to
+  the Run eval button on the project page; `runEval` server action
+  validates the alias and passes the resolved id to `startEvalJob`. The
+  chosen model already shows in the job status line and release chips via
+  `agentModel`.
+- Quickstart documents the aliases for CLI + dashboard.
+- Tests: 59 green (3 new alias tests in evals).
+
+### Decisions
+
+- Alias map lives in core (everything depends on it; avoids an
+  evals↔curation cross-dependency). No ADR — UI/CLI affordance, not an
+  architectural change.
+
+---
+
 ## 2026-06-11 — Session 17: Sonnet 4.6 default + per-tool coverage suites
 
 ### Done
