@@ -1,62 +1,46 @@
-# Render Blueprint (Infrastructure as Code) — ADR-0009.
+# Render Blueprint — FREE test mode (ADR-0009, amended).
 #
-# Defines BOTH environments from one file: each service pins its `branch`,
-# so a push to `dev` auto-deploys the dev pair and a push to `prod`
-# auto-deploys the prod pair. Connect this repo once in the Render
-# dashboard (New → Blueprint) and Render keeps everything in sync.
+# Everything on the free tier so hosting can be tested with no payment
+# info: gateway + dashboard deploy from `main`, one free Postgres.
+# Every push to `main` auto-deploys both services.
 #
-# Both deployables need long-lived Node hosts (docs/03-architecture.md):
-# the gateway holds MCP sessions / SSE streams, and apps/web runs
-# in-process eval jobs that outlive the HTTP response (ADR-0008).
+# Free-tier caveats:
+#   - services sleep after ~15 min idle (first request after that is slow)
+#   - Render allows ONE free Postgres per workspace; it expires in 30 days
+#   - no persistent disk: the dashboard's Forge workspace (pre-release
+#     project files) resets on each deploy; promoted releases are safe in
+#     Postgres
 #
-# Secrets marked `sync: false` must be filled in once in the Render
-# dashboard — see docs/guides/deployment.md. Credentials never live in
-# this file or in git.
+# The full dev/prod setup (paid plans, persistent disk, per-env databases)
+# is preserved in render.paid.yaml — copy it over this file once payment
+# info is added. See docs/guides/deployment.md.
 
 databases:
-  # Release store + encrypted credential vault rows (ADR-0006/0007).
-  # NOTE: Render allows one free Postgres per workspace, and free DBs
-  # expire after 30 days — fine for dev, never for prod.
-  - name: protocolfoundry-db-dev
+  - name: protocolfoundry-db
     plan: free
     region: oregon
-    databaseName: protocolfoundry_dev
-    user: protocolfoundry
-
-  - name: protocolfoundry-db-prod
-    plan: basic-256mb
-    region: oregon
-    databaseName: protocolfoundry_prod
+    databaseName: protocolfoundry
     user: protocolfoundry
 
 envVarGroups:
-  # Secrets that MUST be identical across the gateway and web within one
-  # environment: web encrypts connected credentials with PF_VAULT_KEY and
-  # the gateway decrypts them; scoped tokens are minted and verified with
-  # PF_GATEWAY_TOKEN_SECRET (ADR-0007). Never share these across envs.
-  - name: pf-shared-dev
+  # Must be identical across gateway and web: web encrypts credentials
+  # with PF_VAULT_KEY, the gateway decrypts; tokens are minted/verified
+  # with PF_GATEWAY_TOKEN_SECRET (ADR-0007).
+  - name: pf-shared
     envVars:
-      # 32-byte base64 — generate with `pf keygen` (or `openssl rand -base64 32`).
-      - key: PF_VAULT_KEY
-        sync: false
-      - key: PF_GATEWAY_TOKEN_SECRET
-        generateValue: true
-
-  - name: pf-shared-prod
-    envVars:
+      # 32-byte base64 — generate with `openssl rand -base64 32`
       - key: PF_VAULT_KEY
         sync: false
       - key: PF_GATEWAY_TOKEN_SECRET
         generateValue: true
 
 services:
-  # ---------------------------------------------------------------- dev --
   - type: web
-    name: protocolfoundry-gateway-dev
+    name: protocolfoundry-gateway
     runtime: node
     plan: free
     region: oregon
-    branch: dev
+    branch: main
     autoDeploy: true
     buildCommand: npm ci && npm run build
     # Render injects PORT; the gateway reads PF_PORT.
@@ -67,16 +51,16 @@ services:
         value: "22"
       - key: PF_DATABASE_URL
         fromDatabase:
-          name: protocolfoundry-db-dev
+          name: protocolfoundry-db
           property: connectionString
-      - fromGroup: pf-shared-dev
+      - fromGroup: pf-shared
 
   - type: web
-    name: protocolfoundry-web-dev
+    name: protocolfoundry-web
     runtime: node
     plan: free
     region: oregon
-    branch: dev
+    branch: main
     autoDeploy: true
     buildCommand: npm ci && npm run build && npm run build -w @protocolfoundry/web
     startCommand: npx next start apps/web -p $PORT
@@ -85,66 +69,14 @@ services:
         value: "22"
       - key: PF_DATABASE_URL
         fromDatabase:
-          name: protocolfoundry-db-dev
+          name: protocolfoundry-db
           property: connectionString
       - key: PF_DASHBOARD_SECRET
         generateValue: true
+      # Dashboard login password — pick anything for testing.
       - key: PF_DASHBOARD_PASSWORD
         sync: false
-      # Curation + eval agent models (packages/curation, packages/evals).
+      # Needed only for curation + eval runs; a placeholder is fine until then.
       - key: ANTHROPIC_API_KEY
         sync: false
-      - fromGroup: pf-shared-dev
-
-  # --------------------------------------------------------------- prod --
-  - type: web
-    name: protocolfoundry-gateway-prod
-    runtime: node
-    plan: starter
-    region: oregon
-    branch: prod
-    autoDeploy: true
-    buildCommand: npm ci && npm run build
-    startCommand: PF_PORT=$PORT node apps/gateway/dist/index.js
-    healthCheckPath: /healthz
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: PF_DATABASE_URL
-        fromDatabase:
-          name: protocolfoundry-db-prod
-          property: connectionString
-      - fromGroup: pf-shared-prod
-
-  - type: web
-    name: protocolfoundry-web-prod
-    runtime: node
-    plan: starter
-    region: oregon
-    branch: prod
-    autoDeploy: true
-    buildCommand: npm ci && npm run build && npm run build -w @protocolfoundry/web
-    startCommand: npx next start apps/web -p $PORT
-    # Forge workspace (pre-release project files, eval suites, job records)
-    # lives on disk — persist it across deploys. Releases themselves are in
-    # Postgres.
-    disk:
-      name: pf-workspace
-      mountPath: /var/data
-      sizeGB: 1
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: PF_WORKSPACE_DIR
-        value: /var/data/workspace
-      - key: PF_DATABASE_URL
-        fromDatabase:
-          name: protocolfoundry-db-prod
-          property: connectionString
-      - key: PF_DASHBOARD_SECRET
-        generateValue: true
-      - key: PF_DASHBOARD_PASSWORD
-        sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - fromGroup: pf-shared-prod
+      - fromGroup: pf-shared

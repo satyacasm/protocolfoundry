@@ -1,9 +1,37 @@
-# Deployment — Render, dev + prod (ADR-0009)
+# Deployment — Render (ADR-0009)
 
 Both deployables — the **gateway** (`apps/gateway`, MCP sessions / SSE) and
 the **dashboard** (`apps/web`, in-process eval jobs) — run as long-lived Node
-services on [Render](https://render.com). One blueprint file at the repo root
-(`render.yaml`) defines both environments:
+services on [Render](https://render.com), declared as a blueprint at the repo
+root.
+
+## Current mode: FREE test (`render.yaml`)
+
+The active blueprint is 100% free tier — no payment info needed:
+
+| Service                  | Branch | Plan | Database                                  |
+| ------------------------ | ------ | ---- | ----------------------------------------- |
+| `protocolfoundry-gateway`  | `main` | free | `protocolfoundry-db` (free, expires 30 d) |
+| `protocolfoundry-web`      | `main` | free | `protocolfoundry-db`                      |
+
+**Every push to `main` deploys both services.** Setup:
+
+1. Render dashboard → **New → Blueprint** → `satyacasm/protocolfoundry`,
+   branch `main`.
+2. Fill the prompted secrets: `PF_VAULT_KEY` (`openssl rand -base64 32`),
+   `PF_DASHBOARD_PASSWORD` (your login), `ANTHROPIC_API_KEY` (placeholder is
+   fine until you run curation/evals).
+3. Done. Gateway health: `GET /healthz`; dashboard: log in at `/login`.
+
+Free-tier caveats: services sleep after ~15 min idle (first hit is slow);
+the free Postgres expires after 30 days (recreate or upgrade); no disk, so
+in-flight Forge work resets on deploy (promoted releases are safe in
+Postgres).
+
+## Full mode: dev + prod (`render.paid.yaml`, requires payment info)
+
+When ready, copy `render.paid.yaml` over `render.yaml` and sync the
+blueprint. That restores the two-environment layout:
 
 | Service                      | Branch | Plan    | Database                  |
 | ---------------------------- | ------ | ------- | ------------------------- |
@@ -17,13 +45,13 @@ prod pair.** No GitHub secrets or deploy workflows are needed — Render watches
 the branches directly (`autoDeploy: true`). GitHub Actions (`.github/workflows/ci.yml`)
 runs typecheck + tests + builds on those branches.
 
-## One-time setup
+### One-time setup (full mode)
 
 1. **Render account** with the GitHub repo authorized (prod plans require
    payment info: 2× starter services ≈ $7/mo each, basic-256mb Postgres ≈ $6/mo).
-2. In the Render dashboard: **New → Blueprint**, select
-   `satyacasm/protocolfoundry`, branch `prod`. Render reads `render.yaml` and
-   provisions all six resources (4 services + 2 databases).
+2. Copy `render.paid.yaml` → `render.yaml`, commit, push. In the Render
+   dashboard: **New → Blueprint** (or re-sync the existing one) from `main`.
+   Render provisions all six resources (4 services + 2 databases).
 3. Fill in the `sync: false` secrets when prompted (or later under each
    service / env group → Environment):
    - `PF_VAULT_KEY` (env groups `pf-shared-dev` and `pf-shared-prod`) —
