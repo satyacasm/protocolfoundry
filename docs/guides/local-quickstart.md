@@ -38,6 +38,9 @@ npm run dev -w @protocolfoundry/cli -- <command> <args>
 Given a URL like `https://app.example.com`, the spec is usually at one of:
 
 - `https://app.example.com/openapi.json` (or `/openapi.yaml`)
+- the URL of the app's API documentation page — `pf ingest` auto-discovers a
+  linked spec, or AI-extracts the documented endpoints (needs
+  `ANTHROPIC_API_KEY`) — ADR-0010
 - `https://app.example.com/swagger.json` / `/api-docs` / `/v3/api-docs`
 - linked from the API docs page, or exported from your framework
   (FastAPI: `/openapi.json`; NestJS/Spring/Rails grape-swagger all generate one)
@@ -192,16 +195,6 @@ npm run dev -w @protocolfoundry/cli -- eval suite.json --endpoint http://localho
 You get task completion %, tool-selection accuracy, steps, and token cost per
 task. This is the number that gates releases.
 
-Both LLM-powered commands (`pf curate`, `pf eval`) take `--model` with a
-friendly alias — `haiku` (fastest/cheapest), `sonnet` (default), or `opus`
-(most capable) — or any full Claude model id:
-
-```powershell
-npm run dev -w @protocolfoundry/cli -- eval suite.json --endpoint http://localhost:3001/mcp/myapp --model haiku
-```
-
-The dashboard has the same selector next to the **Run eval** button.
-
 ## 7. Release it properly (versioned, gated, roll-backable)
 
 ```powershell
@@ -245,39 +238,14 @@ Projects, release timelines with eval gauges, the exact tool surface agents
 see, full eval reports, and the audit log with approval-gate events.
 
 > **Prefer clicking to typing?** The dashboard's **Forge** page covers steps
-> 1–3 in the browser: upload the spec (or paste its URL — `.json`, `.yaml`,
-> or a `.zip` containing one; OpenAPI and Postman collections are
-> auto-detected), review/check the operations, optionally run LLM curation
-> and approve its proposals item by item, and stage the release — then
-> promote it from the project page.
+> 1–3 in the browser: upload the spec (or paste its URL), review/check the
+> operations, optionally run LLM curation and approve its proposals item by
+> item, and stage the release — then promote it from the project page.
+> Step 6 too: upload the eval suite on the project page and hit **Run eval**
+> on a staged release — the run executes in the background (live progress on
+> the page) and its scores attach to the release before you promote.
 > Requires `PF_DASHBOARD_PASSWORD` (writes are disabled in open mode) and,
-> for the curation button, `ANTHROPIC_API_KEY` on the dashboard server.
-
-The project page has an **Evals** section: click **Generate coverage suite**
-to get one eval task per tool the release exposes (read tools are called
-live, approval-gated tools get a must-be-refused probe, non-gated write
-tools are skipped unless you opt in — they have real side effects), or
-upload/paste a hand-written suite JSON
-(`{ name, tasks: [{ id, description, prompt, expectedTools, successPattern }] }`,
-e.g. `examples/taskboard/eval-suite.json`) for workflow-level tasks. Note:
-the eval report has **one row per suite task**, not per spec operation —
-coverage of every API comes from the generated coverage suite. Then click
-**Run eval** on any staged or live release. The dashboard serves that release's manifest on an
-ephemeral local gateway, runs the agent loop against it (needs
-`ANTHROPIC_API_KEY` on the dashboard server), shows live progress, and
-attaches the scores to the release — no CLI needed.
-
-Releases that carry an eval also get a **public report** link — an
-HMAC-signed `/reports/<project>/<version>?sig=…` URL you can paste into docs
-or a changelog. Anyone with the link sees the scores, task results, and
-governance facts; nobody can guess links for releases you didn't share.
-
-Every release page also offers a **connection bundle** (`.zip`) download:
-the manifest, ready-to-paste client configs (Claude Code, Claude Desktop,
-Cursor), `pf token issue` instructions, and the eval report. No credentials
-are ever included. Set `$env:PF_PUBLIC_GATEWAY_URL` on the dashboard server
-so the bundle's endpoint URLs point at your gateway (defaults to
-`http://localhost:3001`).
+> for the curation/eval buttons, `ANTHROPIC_API_KEY` on the dashboard server.
 
 ## Troubleshooting
 

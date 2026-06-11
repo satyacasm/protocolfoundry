@@ -7,233 +7,171 @@ honest and terse.
 
 ---
 
-## 2026-06-11 — Session 19: Haiku default, prompt caching, fable alias
+## 2026-06-11 — Session 17: docs-page ingestion (ADR-0010)
 
 ### Done
 
-- **`packages/core/src/models.ts`**: Added `fable` → `claude-fable-5` alias;
-  changed `DEFAULT_CLAUDE_MODEL` from `claude-sonnet-4-6` to `claude-haiku-4-5`
-  to lower operating costs.
-- **`packages/curation/src/propose.ts`**: Extracted `CURATION_SYSTEM_PROMPT`
-  constant (the static curation instructions). `buildCurationPrompt` now returns
-  only the dynamic operations JSON (user message). `createAnthropicCurator` passes
-  the system prompt as a `system` block with `cache_control: { type: "ephemeral" }`
-  so repeated curation calls against the same API hit the cache for the
-  instructions portion (~0.1× base input price on cache reads).
-- **`packages/evals/src/runner.ts`**: Converted `system` string to an array
-  block with `cache_control: { type: "ephemeral" }` in `createAnthropicAgent`.
-- **`apps/web`**: `<select>` for eval model now defaults to `haiku`; `fable`
-  option added. `runEval` server action default and error message updated.
-- **`apps/cli`**: USAGE text for `pf curate` and `pf eval` updated to list
-  `fable` as an alias and show `haiku` as the default.
-- **Tests**: updated "defaults to sonnet" assertion → "defaults to haiku"; all
-  59 tests pass.
+- **`pf ingest <url>` / Forge URL field now accept SaaS API-documentation
+  pages**, not just machine-readable specs. New `packages/discovery/src/docs.ts`
+  (`ingestUrl`), shared by CLI and Forge:
+  1. spec autodiscovery in the HTML (swagger-ui/redoc configs, spec-ish
+     links) — deterministic, no LLM;
+  2. fallback: `DocsExtractor` LLM boundary (interface like `Curator`;
+     scripted fakes in tests, real `createAnthropicDocsExtractor` with
+     structured outputs) extracts documented endpoints → validated →
+     `WorkflowGraph` (dedupe per method+path, path placeholders forced to
+     required inputs, effect from method, auth requirement carried).
+- Extraction lands in the normal curation/review pipeline — hallucinated
+  endpoints die at human review; the eval gate stays the backstop.
+- `Source.kind "docsUrl"` is finally implemented. Plain authenticated-free
+  fetch only, honest UA, no anti-bot circumvention (ADR-0002).
+- 10 new tests (57 total green): autodiscovery, relative resolution,
+  HTML→text, extraction→graph assembly, both ingestUrl paths, error
+  messages. CLAUDE.md / architecture / quickstart synced.
 
 ### Decisions
 
-- System block caching: the curation instructions are the stable portion; the
-  per-API operations JSON is the variable part (user message). Cache hit requires
-  ≥2048 tokens before the marker for Haiku 4.5 — small suites won't cache, but
-  real-world APIs with dozens of operations will.
-- `fable` alias is wired end-to-end but note that `claude-fable-5` has no
-  `budget_tokens` thinking and returns a 400 if `thinking` is set to anything
-  other than `adaptive` or omitted — the current `{ type: "adaptive" }` is
-  compatible.
+- ADR-0010: autodiscovery before LLM; no headless browser for
+  client-rendered docs apps (clear failure message instead) — a rendering
+  crawler is a separate later decision.
 
-### Open questions
+### Next steps
 
-- Haiku 4.5 + adaptive thinking + structured output: if Haiku 4.5 rejects
-  `thinking: { type: "adaptive" }` in practice, add a model-aware guard that
-  omits the thinking param for Haiku.
+- Try `pf ingest` against a few real SaaS docs sites from a network-open
+  environment; tune `findSpecCandidates` patterns with what we learn.
 
 ---
 
-## 2026-06-11 — Session 18: Model switcher (haiku/sonnet/opus) in dashboard + CLI
+## 2026-06-11 — Session 16: dashboard redesign — "porcelain" design language
 
 ### Done
 
-- **Model aliases in @protocolfoundry/core** (`models.ts`): `haiku` →
-  `claude-haiku-4-5`, `sonnet` → `claude-sonnet-4-6` (default, unchanged),
-  `opus` → `claude-opus-4-8`. `resolveClaudeModel()` resolves aliases and
-  passes full `claude-*` ids through; `isClaudeModelAlias()` guards
-  user-supplied input. Lives in core so evals and curation share one map.
-- `createAnthropicAgent` (evals) and `createAnthropicCurator` (curation)
-  now accept an alias or full id — CLI `--model haiku|sonnet|opus|<id>`
-  works for both `pf curate` and `pf eval` with no parser change (usage
-  text updated).
-- Dashboard: model `<select>` (haiku/sonnet/opus, default sonnet) next to
-  the Run eval button on the project page; `runEval` server action
-  validates the alias and passes the resolved id to `startEvalJob`. The
-  chosen model already shows in the job status line and release chips via
-  `agentModel`.
-- Quickstart documents the aliases for CLI + dashboard.
-- Tests: 59 green (3 new alias tests in evals).
+- **Full visual redesign of `apps/web`** to a light, Apple-product-page
+  aesthetic ("porcelain"), chosen from 4 mockup directions
+  (`design-themes/`): studio-light surfaces, hairline borders, rounded
+  cards with layered shadows, Schibsted Grotesk display / Instrument Sans
+  text / Spline Sans Mono.
+- **Motion**: scroll-progress rail under the fixed glass nav; soft
+  rise-on-scroll reveals (`<Reveal>`, IntersectionObserver); parallax hero
+  (`<Parallax>`, rAF) with a studio backdrop and floating machined-metal
+  elements; hover micro-interactions; `prefers-reduced-motion` respected
+  throughout (`src/components/scrollfx.tsx`).
+- **Loading graphics**: hexagonal brand-mark spinner + indeterminate bar
+  (`src/components/loader.tsx`), wired as the route-level `loading.tsx`.
+- **Generated art assets** (`public/art/`): all imagery is authored in-repo
+  (SVG → transparent PNGs rendered via headless Chromium), so it is
+  copyright-free by construction — the sandbox's network policy blocks
+  stock-photo CDNs (Unsplash/Pexels/picsum all 403), so nothing external
+  is hotlinked.
+- Overview page got an Apple-style hero (full-bleed, parallax, CTAs);
+  every other page restyles automatically via the shared classes in
+  `globals.css` (all class names kept). Responsive pass for phones.
+- 47 tests green; production `next build` clean.
 
 ### Decisions
 
-- Alias map lives in core (everything depends on it; avoids an
-  evals↔curation cross-dependency). No ADR — UI/CLI affordance, not an
-  architectural change.
-
----
-
-## 2026-06-11 — Session 17: Sonnet 4.6 default + per-tool coverage suites
-
-### Done
-
-- **Default model switched** `claude-opus-4-8` → `claude-sonnet-4-6` for both
-  LLM boundaries (eval agent in @protocolfoundry/evals, curator in
-  @protocolfoundry/curation; both keep adaptive thinking / structured
-  outputs, which Sonnet 4.6 supports). Historical docs/ADR mentions left as
-  records; CLAUDE.md updated.
-- **Why the Shiprocket report had only 4 rows**: report rows are *suite
-  tasks*, not API operations — the hand-written
-  examples/shiprocket/eval-suite.json has exactly 4 tasks. Fix shipped:
-- **`generateCoverageSuite(manifest)`** (@protocolfoundry/evals): one eval
-  task per exposed tool, so the report scales to the release's whole tool
-  surface. Safety tiers: read tools → live call (success = "RESULT: OK"
-  after a real data-returning call); approval-gated tools → blocked probe
-  (gateway must refuse, success = "RESULT: BLOCKED", nothing executes
-  upstream); non-gated write tools → **skipped by default** (they'd hit the
-  real upstream with agent-invented data), opt-in via includeWrites.
-  Refuses to emit an empty suite.
-- Dashboard: "Generate coverage suite" button in the Evals section
-  (generates from the latest release's manifest, include-writes checkbox,
-  `coverageSuiteGenerated` audit detail). Verified live: taskboard v2 → 3
-  tasks (2 read live + 1 gated probe), create_task/complete_task skipped
-  with an explanatory notice.
-- Quickstart documents rows-per-task vs rows-per-operation explicitly.
-- Tests: 56 green (3 new coverage tests).
+- Theme direction "porcelain" picked by operator preference for an
+  apple.com-like product feel; other three mockups kept in
+  `design-themes/` for reference.
 
 ### Next steps
 
-1. Re-run Shiprocket from the dashboard with a generated coverage suite
-   (all 7 tools → 7 rows; or stage a wider release for more).
-2. OAuth 2.1 external-AS flow; naive-vs-curated public-report comparison.
+- Consider real stock photography (hotlinked Unsplash) once deployed —
+  browsers can fetch what this sandbox cannot.
 
 ---
 
-## 2026-06-11 — Session 16: eval runs from the dashboard (in-process job runner)
+## 2026-06-11 — Session 15: production deployment on Render (ADR-0009)
 
 ### Done
 
-- **The loop is closed**: upload spec → curate → stage → **run eval** →
-  promote, all in the browser. The missing piece since Session 11.
-- **`attachEvalRun(projectId, version, evalRun)`** on `ReleaseStore` (file +
-  Postgres, tests for both): attach/replace the eval evidence on an existing
-  release without touching the immutable manifest. Dashboard staged-then-
-  evaled releases no longer need the CLI round trip.
-- **`lib/eval-jobs.ts`**: dashboard job runner. Serves the release's manifest
-  on an **ephemeral loopback-only gateway** (same executor/credential
-  resolver as production, vault-aware), runs the suite with
-  `createAnthropicAgent` (default `claude-opus-4-8`), attaches the EvalRun,
-  records an `evalCompleted` audit event (new core audit kind). One job per
-  project; progress persisted to the workspace after every task
-  (`onTaskComplete` hook added to `runEvalSuite`). In-process by design for
-  the single-operator deployment — a real queue replaces it at multi-tenant.
-- **Project page "Evals" section**: suite upload/paste (validated by new
-  `parseEvalSuite` zod schema in @protocolfoundry/evals), job status panel
-  with progress gauge auto-refreshing every 4s while running, "Run eval" /
-  "Re-run eval" buttons per staged/live release. Honest hints when writes
-  are disabled or ANTHROPIC_API_KEY is missing.
-- `next.config`: `serverExternalPackages` for express/MCP SDK/Anthropic SDK
-  (they now run inside the Next server process).
-- **Tests: 53 green** (4 new). Highlight: full-loop integration test —
-  scripted agent + mock HTTP upstream + ephemeral gateway + temp release
-  store proves spec-level eval mechanics with no API key. Live form-replay
-  smoke: suite upload (303 + saved), Run eval correctly refused without
-  ANTHROPIC_API_KEY.
+- **ADR-0009**: Render blueprint deployment, branch-per-environment.
+  Root `render.yaml` declares 4 services (gateway + web × dev/prod) and
+  2 Postgres DBs; each service pins its branch with `autoDeploy: true`,
+  so **every push to `dev`/`prod` deploys that environment** — no deploy
+  secrets in GitHub.
+- New long-lived branches **`dev`** and **`prod`** (both cut from the same
+  commit, so the first blueprint sync deploys identical code to both).
+  Promotion flow: feature → `dev` (PR) → `prod` (PR). `main` stays default.
+- **CI** (`.github/workflows/ci.yml`): npm ci → full test suite (builds all
+  workspaces first) → typecheck → web build, on pushes/PRs to
+  `main`/`dev`/`prod`. Render services should use "Auto-Deploy: After CI
+  Checks Pass".
+- Per-env secret wiring: env groups `pf-shared-{dev,prod}` keep
+  `PF_VAULT_KEY` + `PF_GATEWAY_TOKEN_SECRET` identical across gateway/web
+  within an env, never across envs. Operator supplies `PF_VAULT_KEY`,
+  `PF_DASHBOARD_PASSWORD`, `ANTHROPIC_API_KEY` in the Render dashboard
+  (documented in `docs/guides/deployment.md`); the rest are
+  `generateValue`/`fromDatabase`.
+- Prod web gets a 1 GB disk for the Forge workspace
+  (`PF_WORKSPACE_DIR=/var/data/workspace`); dev workspace stays ephemeral.
+- Architecture doc deploy section synced to Render/ADR-0009.
 
-### Next steps
+### Decisions
 
-1. OAuth 2.1 external-AS flow (raised priority per competitive survey).
-2. Large-spec eval campaign (Shiprocket with real token — can now run from
-   the dashboard) → naive-vs-curated number for the public report.
-3. Metering/billing, drift detection, design partners.
-
----
-
-## 2026-06-11 — Session 15: public agent-readiness reports (signed share links)
-
-### Done
-
-- **Public eval reports** — competitive move #1 from
-  docs/06-competitive-landscape.md, shipped: every release with an eval run
-  gets a "public report (shareable link)" button on its release page →
-  `/reports/<project>/<version>?sig=<hmac>`. The page renders without a
-  session (middleware allows `/reports/*`; the signature is the gate):
-  headline completion/tool-selection scores, per-task results, tool-surface
-  shape, governance facts (immutable releases, scopes, audit, approval
-  gates), "measured, not promised" framing.
-- **`lib/report-sign.ts`**: HMAC-SHA256 over `report:<project>:<version>`
-  with `PF_DASHBOARD_SECRET ?? PF_DASHBOARD_PASSWORD` (32-hex-char sig,
-  timing-safe compare). Signatures never expire — links published in vendor
-  docs must keep working. Open mode (no password) needs no signature.
-  Bad/missing sig and missing release/eval are an indistinguishable 404.
-- Verified live on the prod build: anonymous fetch with valid sig → 200 with
-  scores; missing sig → 404; forged sig → 404; link correctly rendered on
-  the release page. 49 tests green (4 new sign/verify tests).
-- Quickstart + roadmap + competitive doc updated.
-
-### Next steps
-
-1. Naive-vs-curated comparison on the public report (the marketing delta)
-   once the large-spec eval campaign lands.
-2. OAuth 2.1 external-AS flow (raised priority per competitive survey).
-3. Eval runs from the dashboard (job runner); Shiprocket real-token eval.
-
----
-
-## 2026-06-11 — Session 14: competitive landscape, dashboard motion pass, zip bundles
-
-### Done
-
-- **`docs/06-competitive-landscape.md`**: market map (June 2026) across four
-  archetypes — spec-to-server platforms (Speakeasy Gram, Stainless, Tyk AI
-  Studio, MCP.link, openapi-mcp-generator family), connector catalogs
-  (Composio/Zapier/Pipedream/Klavis), registries (Smithery/Glama), DIY.
-  Strategic moves: public eval-readiness reports, eval-gated releases as the
-  trust story, Postman/beyond-OpenAPI ingestion as wedge-widener, connection
-  bundles not source bundles, agent analytics, registry partnerships.
-  **OAuth 2.1 gap raised in priority** (most-cited managed-platform feature we
-  lack); roadmap + strategy doc + CLAUDE.md cross-linked.
-- **Dashboard motion pass** (CSS-first, `prefers-reduced-motion` safe): rising
-  ember particles, gauge fills sweeping to value with hot tip, count-up stats
-  (`CountUp` client component), section-underline draws, card sheen/lift +
-  furnace-edge flicker on live cards, nav underline draws, button sheen/press,
-  staggered table rows, timeline live-dot ping, flash slide-ins.
-- **Connection bundles (.zip)**: release page → `GET /api/projects/<id>/
-  releases/<v>/bundle` streams a zip with README (endpoint, `pf token issue`
-  instructions, tool/scope/gate table), manifest.json, release.json, client
-  configs (Claude Code `.mcp.json`, Claude Desktop via mcp-remote, Cursor),
-  eval-report.json when present. **No credentials, no source** (ADR-0003).
-  `PF_PUBLIC_GATEWAY_URL` controls the advertised endpoint origin.
-- **Zip spec upload in the Forge**: `.zip` accepted (extension or PK magic);
-  json/yaml entries tried shallowest-first until one ingests as
-  OpenAPI/Postman; provenance `upload:<zip>!<entry>`; `__MACOSX`/dotfiles
-  skipped. Verified live by no-JS form replay: login → multipart zip post →
-  303 to curate, graph carries the zip-entry sourceId.
-- **`.gitignore` bug**: bare `releases/` ignored the new route directory
-  (`.../releases/[version]/bundle/`) — root-anchored to `/releases/`,
-  `/workspace/`; the route file was silently untracked before the fix.
-- Route handlers that read live stores need `export const dynamic =
-  "force-dynamic"` — Next statically optimized the bundle GET and cached a
-  500 from build context.
-- Tests: 45 green (4 new in `apps/web/test/bundle.test.ts`); typecheck +
-  prod build clean; bundle download (200/zip + 404 path) and zip upload
-  verified against the prod server.
+- Render over Fly/Railway (native branch auto-deploy, blueprint IaC, no
+  Docker needed for a single-tree monorepo) — ADR-0009.
 
 ### Open questions
 
-- Dev-harness browser tools were broken this session — the animated UI is
-  build-verified but not eyeballed; worth a quick human look at
-  `npm run dev -w @protocolfoundry/web`.
+- When does dev's free Postgres expiry (30 days) become annoying enough to
+  pay for basic-256mb in dev too?
+- Custom domains + `PF_AUTH_SERVER_URL` (OAuth resource metadata) once a
+  real authorization server exists.
 
 ### Next steps
 
-1. Public shareable eval-readiness report (competitive move #1).
-2. OAuth 2.1 external-AS flow (raised priority per competitive survey).
-3. Eval runs from the dashboard (job runner); Shiprocket real-token eval.
+- Operator: connect the blueprint in the Render dashboard and fill the
+  `sync: false` secrets (one-time, see `docs/guides/deployment.md`).
+- Flip the four services to "Auto-Deploy: After CI Checks Pass".
+
+---
+
+## 2026-06-11 — Session 14: eval runs from the dashboard (ADR-0008)
+
+### Done
+
+- **The browser loop is closed**: ingest → curate → stage → **eval** →
+  promote, all from the dashboard. The "no eval" chip on forge-staged
+  releases now resolves in the UI instead of via `pf eval`.
+- **`ReleaseStore.attachEvalRun`** (file + Postgres): attach/replace the
+  eval on a *staged* release (latest run wins, `evalRunId` updated);
+  live/retired releases are sealed — their eval is what they were promoted
+  on. Manifest immutability untouched.
+- **In-process eval job runner** (`apps/web/src/lib/eval-jobs.ts`):
+  - hosts the staged manifest on an **ephemeral loopback gateway**
+    (`createGatewayApp` on `127.0.0.1:0`, one-time key, production env→vault
+    credential resolver, shared audit store — eval tool calls hit the real
+    upstream and are audited like real traffic);
+  - file-backed job records (`workspace/<project>/jobs/eval-v<N>.json`) with
+    per-task progress via a new `runEvalSuite` `onResult` callback;
+  - server action validates fast, then schedules the run with Next `after()`;
+    project page auto-refreshes while a job is active; stale "running"
+    records (server restart mid-run) surface as *interrupted*;
+  - success appends a new `evalCompleted` audit event (kind added to core +
+    audit viewer filters, alongside `manifestChange`).
+- **Eval suites are dashboard-managed**: upload/paste JSON on the project
+  page, zod-validated (`parseEvalSuite`, also checks success-pattern
+  regexes), stored in the forge workspace, audited.
+- Architecture doc synced: `apps/web` now needs a long-lived Node host
+  (in-process jobs outlive the response — serverless would kill them).
+- 47 tests green (6 new): attachEvalRun semantics on both store backends,
+  suite validation + progress callback, and a dashboard-job e2e (scripted
+  agent → ephemeral gateway → eval attached, audit trail clean of secrets).
+- Verified live via no-JS form replay: suite upload (303 + notice, table
+  rendered, Run eval enabled) → Run eval with a dummy API key → job executed
+  after the response and recorded a clean `failed` with the real Anthropic
+  401 → page shows the failure chip; unauthenticated POST still 307s to
+  /login. `next build` green with the gateway/express server-external
+  packages.
+
+### Next steps
+
+1. Eval Shiprocket with a real account token (user) — large-spec eval
+   campaign continues.
+2. Metering/billing, drift detection, design partners.
+3. Multi-tenant job queue (DB-backed) when the in-process runner stops being
+   enough — job-record format is already the UI contract.
 
 ---
 

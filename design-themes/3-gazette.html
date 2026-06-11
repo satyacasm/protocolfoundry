@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Theme 3 — Gazette (warm editorial / Swiss print)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f6f1e7;
+    --paper-2: #efe7d8;
+    --ink: #211d17;
+    --ink-2: #6f6657;
+    --rust: #b3431b;
+    --rule: #d8cdb8;
+    --good: #3e6b48;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font-family: "Newsreader", serif; font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: "Fraunces", serif; }
+  .mono { font-family: "Spline Sans Mono", monospace; }
+  a { color: inherit; text-decoration: none; }
+
+  .sheet { max-width: 1240px; margin: 0 auto; padding: 0 40px; }
+
+  /* masthead, newspaper style */
+  .topline { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--rule); font-family: "Spline Sans Mono"; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+  .masthead { text-align: center; padding: 34px 0 26px; border-bottom: 3px double var(--ink); }
+  .masthead h1 { font-family: "Fraunces"; font-weight: 900; font-size: clamp(44px, 5.4vw, 72px); letter-spacing: -0.015em; }
+  .masthead h1 em { font-style: italic; font-weight: 300; color: var(--rust); }
+  .navrow { display: flex; justify-content: center; gap: 44px; padding: 13px 0; border-bottom: 1px solid var(--ink); font-family: "Spline Sans Mono"; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; }
+  .navrow .on { color: var(--rust); }
+
+  /* lead story grid */
+  .lead { display: grid; grid-template-columns: 1.5fr 1fr; gap: 0; border-bottom: 1px solid var(--ink); }
+  .lead .story { padding: 44px 44px 44px 0; border-right: 1px solid var(--rule); }
+  .lead .kicker { font-family: "Spline Sans Mono"; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--rust); }
+  .lead h2 { font-family: "Fraunces"; font-size: clamp(40px, 4.6vw, 64px); font-weight: 700; line-height: 1.04; letter-spacing: -0.02em; margin: 18px 0 20px; }
+  .lead h2 em { font-style: italic; font-weight: 300; }
+  .lead .standfirst { font-size: 20px; line-height: 1.55; color: var(--ink-2); font-weight: 400; max-width: 54ch; }
+  .lead .standfirst b { color: var(--ink); font-weight: 500; }
+  .byline { margin-top: 26px; font-family: "Spline Sans Mono"; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); display: flex; gap: 26px; }
+  .lead .actions { margin-top: 30px; display: flex; gap: 14px; }
+  .stamp { display: inline-block; background: var(--ink); color: var(--paper); font-family: "Spline Sans Mono"; font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; padding: 13px 24px; }
+  .stamp.o { background: transparent; color: var(--ink); outline: 1px solid var(--ink); }
+
+  /* right column: the ledger */
+  .ledger { padding: 44px 0 44px 40px; }
+  .ledger .h { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+  .ledger .h .t { font-family: "Fraunces"; font-weight: 900; font-size: 19px; }
+  .ledger .h .mono { font-size: 10px; color: var(--ink-2); letter-spacing: .14em; }
+  .entry { padding: 16px 0 14px; border-bottom: 1px solid var(--rule); }
+  .entry .r1 { display: flex; justify-content: space-between; align-items: baseline; }
+  .entry .name { font-family: "Fraunces"; font-weight: 700; font-size: 19px; }
+  .entry .name i { font-style: normal; font-family: "Spline Sans Mono"; font-size: 10.5px; color: var(--ink-2); margin-left: 8px; letter-spacing: .06em; }
+  .tag { font-family: "Spline Sans Mono"; font-size: 9.5px; letter-spacing: .18em; padding: 4px 9px; }
+  .tag.live { color: var(--good); outline: 1px solid var(--good); }
+  .tag.staged { color: var(--rust); outline: 1px dashed var(--rust); }
+  .entry .r2 { display: flex; justify-content: space-between; margin-top: 9px; font-size: 13.5px; color: var(--ink-2); font-style: italic; }
+  .entry .r2 .mono { font-style: normal; font-size: 11px; color: var(--ink); }
+  .entry .dotbar { margin-top: 10px; display: flex; gap: 4px; }
+  .entry .dotbar i { width: 14px; height: 6px; background: var(--good); }
+  .entry .dotbar i.off { background: var(--rule); }
+  .entry .dotbar i.warn { background: var(--rust); }
+
+  /* numerals band */
+  .numerals { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--ink); }
+  .num { padding: 40px 36px 44px; border-right: 1px solid var(--rule); }
+  .num:last-child { border-right: 0; }
+  .num .n { font-family: "Fraunces"; font-weight: 900; font-size: 84px; line-height: 1; letter-spacing: -0.03em; }
+  .num .n sup { font-size: 26px; color: var(--rust); font-weight: 500; }
+  .num .cap { margin-top: 12px; font-size: 15px; font-style: italic; color: var(--ink-2); line-height: 1.5; max-width: 30ch; }
+  .num .rulekick { font-family: "Spline Sans Mono"; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--rust); margin-bottom: 16px; display: block; }
+
+  /* pipeline as classified columns */
+  .pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-bottom: 3px double var(--ink); }
+  .col { padding: 36px 30px 46px; border-right: 1px solid var(--rule); }
+  .col:last-child { border-right: 0; }
+  .col .step { font-family: "Fraunces"; font-weight: 900; font-size: 15px; color: var(--paper); background: var(--ink); width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; }
+  .col h4 { font-family: "Fraunces"; font-weight: 700; font-size: 24px; margin: 18px 0 10px; }
+  .col p { font-size: 14.5px; line-height: 1.65; color: var(--ink-2); }
+  .col p b { color: var(--ink); font-weight: 500; }
+
+  footer { display: flex; justify-content: space-between; padding: 20px 0 46px; font-family: "Spline Sans Mono"; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="topline"><span>Vol. 0 — No. 9</span><span>The Operator's Edition</span><span>Thursday, 11 June 2026</span></div>
+
+    <header class="masthead">
+      <h1>The Protocol<em>Foundry</em></h1>
+    </header>
+    <nav class="navrow"><span class="on">Overview</span><span>Forge</span><span>Releases</span><span>Eval Desk</span><span>Audit Ledger</span></nav>
+
+    <section class="lead">
+      <div class="story">
+        <span class="kicker">Front page · Control plane</span>
+        <h2 class="display">Your API, promoted to an <em>eval‑tested</em> MCP server.</h2>
+        <p class="standfirst">In which an OpenAPI spec is ingested, its endpoints <b>curated into task‑level tools</b> by a reviewed LLM pass, hammered by a real agent loop, and — only upon a passing grade — promoted to the gateway. <b>Every call audited.</b> Every credential vaulted. No codegen, anywhere.</p>
+        <div class="byline"><span>Gateway: us‑west · healthy</span><span>47 tests green</span></div>
+        <div class="actions"><span class="stamp">Forge a server</span><span class="stamp o">Read the ledger</span></div>
+      </div>
+
+      <aside class="ledger">
+        <div class="h"><span class="t display">The Register</span><span class="mono">LIVE HOLDINGS</span></div>
+        <div class="entry">
+          <div class="r1"><span class="name display">Shiprocket <i>v4</i></span><span class="tag live">LIVE</span></div>
+          <div class="r2"><span>12 tools, of Postman stock</span><span class="mono">eval 92%</span></div>
+          <div class="dotbar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="off"></i></div>
+        </div>
+        <div class="entry">
+          <div class="r1"><span class="name display">Petstore <i>v2</i></span><span class="tag live">LIVE</span></div>
+          <div class="r2"><span>8 tools, OpenAPI bred</span><span class="mono">eval 100%</span></div>
+          <div class="dotbar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="entry">
+          <div class="r1"><span class="name display">Billing‑API <i>v1</i></span><span class="tag staged">STAGED</span></div>
+          <div class="r2"><span>14 tools, before the gate</span><span class="mono">running…</span></div>
+          <div class="dotbar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="warn"></i><i class="off"></i><i class="off"></i></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="numerals">
+      <div class="num"><span class="rulekick">The standard</span><div class="n display">9<sup>/9</sup></div><p class="cap">eval tasks passed before Shiprocket v4 was permitted to serve a single agent.</p></div>
+      <div class="num"><span class="rulekick">The economy</span><div class="n display">1<sup>gw</sup></div><p class="cap">shared, manifest‑interpreted gateway. Not thousands of deployed codebases.</p></div>
+      <div class="num"><span class="rulekick">The oath</span><div class="n display">0</div><p class="cap">credentials in prompts, logs, or manifests — vault references only.</p></div>
+    </section>
+
+    <section class="pipeline">
+      <div class="col"><span class="step display">1</span><h4 class="display">Ingest</h4><p>An <b>OpenAPI spec or Postman collection</b> arrives at the Forge; a workflow graph of capabilities is drawn up.</p></div>
+      <div class="col"><span class="step display">2</span><h4 class="display">Curate</h4><p>The curation pass proposes <b>task‑level tools</b> — composed, named, scoped. A human editor approves every line.</p></div>
+      <div class="col"><span class="step display">3</span><h4 class="display">Examine</h4><p>A genuine agent loop sits the suite against the staged release. <b>Failures stay staged.</b> No exceptions are printed.</p></div>
+      <div class="col"><span class="step display">4</span><h4 class="display">Circulate</h4><p>Promotion to the gateway, <b>scoped tokens</b> at the door, and every tool call entered into the audit ledger.</p></div>
+    </section>
+
+    <footer><span>© 2026 The ProtocolFoundry Co.</span><span>Render: Gazette / warm print</span><span>Set in Fraunces & Newsreader</span></footer>
+  </div>
+</body>
+</html>

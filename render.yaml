@@ -1,0 +1,82 @@
+# Render Blueprint — FREE test mode (ADR-0009, amended).
+#
+# Everything on the free tier so hosting can be tested with no payment
+# info: gateway + dashboard deploy from `main`, one free Postgres.
+# Every push to `main` auto-deploys both services.
+#
+# Free-tier caveats:
+#   - services sleep after ~15 min idle (first request after that is slow)
+#   - Render allows ONE free Postgres per workspace; it expires in 30 days
+#   - no persistent disk: the dashboard's Forge workspace (pre-release
+#     project files) resets on each deploy; promoted releases are safe in
+#     Postgres
+#
+# The full dev/prod setup (paid plans, persistent disk, per-env databases)
+# is preserved in render.paid.yaml — copy it over this file once payment
+# info is added. See docs/guides/deployment.md.
+
+databases:
+  - name: protocolfoundry-db
+    plan: free
+    region: oregon
+    databaseName: protocolfoundry
+    user: protocolfoundry
+
+envVarGroups:
+  # Must be identical across gateway and web: web encrypts credentials
+  # with PF_VAULT_KEY, the gateway decrypts; tokens are minted/verified
+  # with PF_GATEWAY_TOKEN_SECRET (ADR-0007).
+  - name: pf-shared
+    envVars:
+      # 32-byte base64 — generate with `openssl rand -base64 32`
+      - key: PF_VAULT_KEY
+        sync: false
+      - key: PF_GATEWAY_TOKEN_SECRET
+        generateValue: true
+
+services:
+  - type: web
+    name: protocolfoundry-gateway
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    buildCommand: npm ci && npm run build
+    # Render injects PORT; the gateway reads PF_PORT.
+    startCommand: PF_PORT=$PORT node apps/gateway/dist/index.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PF_DATABASE_URL
+        fromDatabase:
+          name: protocolfoundry-db
+          property: connectionString
+      - fromGroup: pf-shared
+
+  - type: web
+    name: protocolfoundry-web
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    buildCommand: npm ci && npm run build && npm run build -w @protocolfoundry/web
+    startCommand: npx next start apps/web -p $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PF_DATABASE_URL
+        fromDatabase:
+          name: protocolfoundry-db
+          property: connectionString
+      - key: PF_DASHBOARD_SECRET
+        generateValue: true
+      # Dashboard login password — pick anything for testing.
+      - key: PF_DASHBOARD_PASSWORD
+        sync: false
+      # Needed only for curation + eval runs; a placeholder is fine until then.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - fromGroup: pf-shared

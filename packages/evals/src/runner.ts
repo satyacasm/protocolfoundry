@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { z } from "zod";
 import { EvalRun, resolveClaudeModel, type EvalTaskResult } from "@protocolfoundry/core";
 
 /** One realistic task an agent should be able to complete via the server. */
@@ -22,23 +22,28 @@ export interface EvalSuite {
   tasks: EvalTask[];
 }
 
-const EvalTaskSchema = z.object({
-  id: z.string().min(1),
-  description: z.string().min(1),
-  prompt: z.string().min(1),
-  expectedTools: z.array(z.string()),
-  successPattern: z.string().min(1),
-});
-
 const EvalSuiteSchema = z.object({
   name: z.string().min(1),
-  tasks: z.array(EvalTaskSchema).min(1),
+  tasks: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        description: z.string(),
+        prompt: z.string().min(1),
+        expectedTools: z.array(z.string()),
+        successPattern: z.string().min(1),
+      }),
+    )
+    .min(1),
 });
 
-/** Validate untrusted suite JSON (uploads, files) into an EvalSuite. */
+/** Validate untrusted JSON (file upload, pasted form data) into an EvalSuite. */
 export function parseEvalSuite(raw: unknown): EvalSuite {
-  const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-  return EvalSuiteSchema.parse(data);
+  const suite = EvalSuiteSchema.parse(
+    typeof raw === "string" ? JSON.parse(raw) : raw,
+  );
+  for (const task of suite.tasks) new RegExp(task.successPattern); // throws on bad regex
+  return suite;
 }
 
 export interface EvalEndpoint {
@@ -144,8 +149,15 @@ async function connectMcp(endpoint: EvalEndpoint): Promise<Client> {
 export interface RunOptions {
   /** Max agent turns per task before declaring failure. */
   maxSteps?: number;
-  /** Progress hook, fired after each task (dashboard job status). */
-  onTaskComplete?: (completed: number, total: number, result: EvalTaskResult) => void;
+  /**
+   * Called after each task finishes — progress reporting for long runs
+   * (e.g. the dashboard job runner). Awaited, so it may persist state.
+   */
+  onResult?: (
+    result: EvalTaskResult,
+    completed: number,
+    total: number,
+  ) => void | Promise<void>;
 }
 
 async function runTask(
@@ -242,7 +254,7 @@ export async function runEvalSuite(
   for (const task of suite.tasks) {
     const result = await runTask(task, endpoint, agent, maxSteps);
     results.push(result);
-    options.onTaskComplete?.(results.length, suite.tasks.length, result);
+    await options.onResult?.(result, results.length, suite.tasks.length);
   }
   const completionRate =
     results.filter((r) => r.completed).length / Math.max(results.length, 1);

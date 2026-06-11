@@ -12,6 +12,10 @@ import { parseEvalSuite, type EvalSuite } from "@protocolfoundry/evals";
 
 const root = (): string => process.env.PF_WORKSPACE_DIR ?? "workspace";
 
+export function projectWorkspaceDir(projectId: string): string {
+  return projectDir(projectId);
+}
+
 function projectDir(projectId: string): string {
   if (!/^[A-Za-z0-9_-]+$/.test(projectId)) {
     throw new Error("Project id must be letters, digits, dashes, or underscores");
@@ -50,44 +54,18 @@ export async function getProposal(projectId: string): Promise<CurationProposal |
   return raw === undefined ? undefined : CurationProposal.parse(raw);
 }
 
-/** Eval suite for a project (JSON validated by @protocolfoundry/evals). */
-export async function saveSuite(projectId: string, suite: EvalSuite): Promise<void> {
+/** The project's agent-usability eval suite (validated, dashboard-managed). */
+export async function saveEvalSuite(projectId: string, suite: EvalSuite): Promise<void> {
   const dir = projectDir(projectId);
   await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, "suite.json"), JSON.stringify(suite, null, 2), "utf8");
+  await writeFile(join(dir, "eval-suite.json"), JSON.stringify(suite, null, 2), "utf8");
 }
 
-export async function getSuite(projectId: string): Promise<EvalSuite | undefined> {
-  const raw = await readJson(join(projectDir(projectId), "suite.json"));
+export async function getEvalSuite(projectId: string): Promise<EvalSuite | undefined> {
+  const raw = await readJson(join(projectDir(projectId), "eval-suite.json"));
   return raw === undefined ? undefined : parseEvalSuite(raw);
 }
 
-/** Latest dashboard-triggered eval job for a project (one at a time). */
-export interface EvalJobState {
-  projectId: string;
-  version: number;
-  suiteName: string;
-  agentModel: string;
-  status: "running" | "succeeded" | "failed";
-  completedTasks: number;
-  totalTasks: number;
-  startedAt: string;
-  finishedAt?: string;
-  evalRunId?: string;
-  error?: string;
-}
-
-export async function saveEvalJob(state: EvalJobState): Promise<void> {
-  const dir = projectDir(state.projectId);
-  await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, "eval-job.json"), JSON.stringify(state, null, 2), "utf8");
-}
-
-export async function getEvalJob(projectId: string): Promise<EvalJobState | undefined> {
-  return (await readJson(join(projectDir(projectId), "eval-job.json"))) as
-    | EvalJobState
-    | undefined;
-}
 
 export interface ForgeProject {
   projectId: string;

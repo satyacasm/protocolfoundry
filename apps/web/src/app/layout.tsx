@@ -1,36 +1,24 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
-import { Chakra_Petch, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { Instrument_Sans, Schibsted_Grotesk, Spline_Sans_Mono } from "next/font/google";
+import { ScrollProgress } from "@/components/scrollfx";
 import "./globals.css";
 
-const display = Chakra_Petch({
-  weight: ["500", "600", "700"],
+const display = Schibsted_Grotesk({
+  weight: ["400", "500", "700", "900"],
   subsets: ["latin"],
   variable: "--next-font-display",
 });
-const mono = IBM_Plex_Mono({
+const mono = Spline_Sans_Mono({
   weight: ["400", "500", "600"],
   subsets: ["latin"],
   variable: "--next-font-mono",
 });
-const sans = IBM_Plex_Sans({
-  weight: ["400", "500"],
+const sans = Instrument_Sans({
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
   variable: "--next-font-sans",
 });
-
-/* fixed field so server render is deterministic — sparks drift up the whole viewport */
-const emberField = [
-  { x: 8, size: 2, dur: 19, delay: 0 },
-  { x: 21, size: 3, dur: 14, delay: 4 },
-  { x: 34, size: 2, dur: 22, delay: 9 },
-  { x: 47, size: 2, dur: 16, delay: 2 },
-  { x: 58, size: 3, dur: 20, delay: 12 },
-  { x: 69, size: 2, dur: 15, delay: 6 },
-  { x: 81, size: 3, dur: 18, delay: 1 },
-  { x: 90, size: 2, dur: 23, delay: 14 },
-  { x: 96, size: 2, dur: 17, delay: 8 },
-];
 
 export const metadata: Metadata = {
   title: "ProtocolFoundry — Control Plane",
@@ -42,47 +30,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${mono.variable} ${sans.variable}`}>
       <body>
-        <div className="embers" aria-hidden>
-          {emberField.map((ember, i) => (
-            <span
-              key={i}
-              style={
-                {
-                  "--x": `${ember.x}%`,
-                  "--size": `${ember.size}px`,
-                  "--dur": `${ember.dur}s`,
-                  "--delay": `${ember.delay}s`,
-                } as React.CSSProperties
-              }
-            />
-          ))}
-        </div>
+        <header className="masthead">
+          <Link href="/" className="wordmark">
+            <span className="tick">⟨/⟩</span>
+            Protocol<em>Foundry</em>
+          </Link>
+          <nav>
+            <Link href="/">Overview</Link>
+            <Link href="/forge">Forge</Link>
+            <Link href="/audit">Audit log</Link>
+            {authConfigured ? (
+              <form method="post" action="/api/logout" style={{ display: "inline" }}>
+                <button type="submit" className="logout-button">
+                  Log out
+                </button>
+              </form>
+            ) : null}
+          </nav>
+          <ScrollProgress />
+        </header>
         <div className="shell">
-          <header className="masthead">
-            <Link href="/" className="wordmark">
-              <span className="tick">⟨/⟩</span>
-              Protocol<em>Foundry</em>
-            </Link>
-            <nav>
-              <Link href="/">Overview</Link>
-              <Link href="/forge">Forge</Link>
-              <Link href="/audit">Audit log</Link>
-              {authConfigured ? (
-                <form method="post" action="/api/logout" style={{ display: "inline" }}>
-                  <button type="submit" className="logout-button">
-                    Log out
-                  </button>
-                </form>
-              ) : null}
-            </nav>
-          </header>
           {!authConfigured ? (
             <p className="open-banner">
-              OPEN MODE — set PF_DASHBOARD_PASSWORD to require operator login.
+              Open mode — set PF_DASHBOARD_PASSWORD to require operator login.
             </p>
           ) : null}
           {children}
         </div>
+        <footer className="colophon">
+          <span>© 2026 ProtocolFoundry</span>
+          <span className="mono">eval-gated MCP servers · one gateway</span>
+        </footer>
       </body>
     </html>
   );

@@ -103,26 +103,14 @@ the large-spec campaign.
       read/write/destructive by effect; `pf token issue` mints expiring,
       server-bound, scope-carrying tokens; gateway enforces per tool call;
       RFC 9728 metadata + WWW-Authenticate on 401.
-- [x] Dashboard v2c — motion design pass (precision-foundry animations,
-      reduced-motion safe) + **connection bundles**: per-release `.zip`
-      download (manifest, client configs, token instructions, eval report —
-      never credentials, never source; ADR-0003 intact) and `.zip` spec
-      uploads in the Forge.
-- [x] **Eval runs from the dashboard**: per-project eval suites uploaded in
-      the UI; "Run eval" on any staged/live release serves that manifest on
-      an ephemeral loopback gateway, runs the agent-loop suite, attaches the
-      `EvalRun` to the release (`attachEvalRun`, both store backends), with
-      live progress + `evalCompleted` audit events. In-process job runner —
-      a real queue replaces it at multi-tenant.
-- [x] **Public agent-readiness reports** (competitive move #1,
-      docs/06-competitive-landscape.md): HMAC-signed shareable
-      `/reports/<project>/<version>` links from the release page — scores,
-      task table, governance facts; no login needed, unforgeable, 404 on
-      bad signatures, signatures never expire.
+- [x] Eval runs from the dashboard (ADR-0008): per-project eval suites
+      uploaded/pasted in the UI (zod-validated); "Run eval" on a staged
+      release hosts its manifest on an ephemeral loopback gateway and runs
+      the agent suite as an in-process job with live per-task progress; the
+      EvalRun attaches to the staged release (`attachEvalRun`, both store
+      backends) and completion is audited (`evalCompleted`).
 - [ ] Full OAuth 2.1 authorization-code flow via external AS (deferred —
-      ADR-0007; metadata endpoint already advertises authorization servers).
-      **Raised priority**: competitive survey (docs/06-competitive-landscape.md)
-      found managed OAuth is the #1 hosted-platform selling point we lack.
+      ADR-0007; metadata endpoint already advertises authorization servers)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME
 - [ ] Drift detection: re-ingest spec on schedule, diff the graph, flag breaking
       changes, propose regeneration

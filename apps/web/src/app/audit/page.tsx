@@ -9,6 +9,8 @@ const KINDS = [
   "approvalDenied",
   "releasePromoted",
   "releaseRolledBack",
+  "evalCompleted",
+  "manifestChange",
   "credentialConnected",
 ] as const;
 

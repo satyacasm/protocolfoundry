@@ -1,152 +1,204 @@
-import type { Server } from "node:http";
-import type { AuditSink } from "@protocolfoundry/audit";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import type { Server as HttpServer } from "node:http";
+import { join } from "node:path";
+import type { AuditStore } from "@protocolfoundry/audit";
+import type { ReleaseStore } from "@protocolfoundry/releases";
+import { createCredentialResolver, createGatewayApp } from "@protocolfoundry/gateway";
+import { createVaultFromEnv } from "@protocolfoundry/vault";
 import {
   createAnthropicAgent,
   runEvalSuite,
   type AgentModel,
-  type EvalSuite,
 } from "@protocolfoundry/evals";
-import { createCredentialResolver, createGatewayApp } from "@protocolfoundry/gateway";
-import type { ReleaseStore } from "@protocolfoundry/releases";
-import { createVaultFromEnv } from "@protocolfoundry/vault";
-import { auditStore, store } from "./data";
-import { getSuite, saveEvalJob, type EvalJobState } from "./workspace";
+import { getEvalSuite, projectWorkspaceDir } from "./workspace";
 
 /**
- * Dashboard-triggered eval runs. The job serves the release's manifest on an
- * ephemeral loopback-only gateway (vault-aware credentials, same executor the
- * real gateway uses), runs the project's eval suite against it with the
- * Anthropic agent, and attaches the resulting EvalRun to the release.
+ * Dashboard eval runs (ADR-0008). An eval job hosts a STAGED release's
+ * manifest on an ephemeral loopback gateway (one-time key, same credential
+ * resolution and audit sink as the real gateway — tool calls hit the real
+ * upstream and are audited), runs the project's eval suite with a real agent
+ * loop, and attaches the resulting EvalRun to the release.
  *
- * Runs in-process in the Next server (single-operator deployment): the server
- * action fires the job and returns; progress is persisted to the workspace
- * after every task so page refreshes show it. One job per project at a time.
- * A real queue replaces this at multi-tenant (the API surface won't change:
- * suite in workspace, EvalRun on the release).
+ * Job records are files in the forge workspace —
+ * workspace/<projectId>/jobs/eval-v<N>.json, one per release version,
+ * replaced on re-run. Execution is in-process (the dashboard is a
+ * single-operator, single-process Node server; a real queue arrives with
+ * multi-tenancy).
  */
 
-const runningJobs: Set<string> = ((globalThis as Record<string, unknown>)["__pfEvalJobs"] ??=
-  new Set<string>()) as Set<string>;
-
-export function isEvalRunning(projectId: string): boolean {
-  return runningJobs.has(projectId);
+export interface EvalJob {
+  id: string;
+  projectId: string;
+  version: number;
+  suiteName: string;
+  agentModel: string;
+  status: "running" | "succeeded" | "failed";
+  totalTasks: number;
+  completedTasks: number;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
+  evalRunId?: string;
 }
 
-export interface StartEvalOptions {
-  model?: string;
-  /** Test seams — default to the shared stores and the real Anthropic agent. */
+export interface EvalJobDeps {
+  store: ReleaseStore;
+  audit: AuditStore;
+  projectId: string;
+  version: number;
+  /** Who triggered the run (audit attribution). */
+  actorId: string;
+  /** Injectable for tests; defaults to the real Anthropic agent loop. */
   agent?: AgentModel;
-  releaseStore?: ReleaseStore;
-  audit?: AuditSink;
-  suite?: EvalSuite;
+  /** Friendly model alias or full model ID; defaults to haiku. */
+  model?: string;
 }
 
-export interface StartedEvalJob {
-  state: EvalJobState;
-  /** Resolves when the job finishes (the server action does not await it). */
-  done: Promise<EvalJobState>;
+function jobPath(projectId: string, version: number): string {
+  return join(projectWorkspaceDir(projectId), "jobs", `eval-v${version}.json`);
 }
 
-export async function startEvalJob(
+async function writeJob(job: EvalJob): Promise<void> {
+  const path = jobPath(job.projectId, job.version);
+  await mkdir(join(projectWorkspaceDir(job.projectId), "jobs"), { recursive: true });
+  await writeFile(path, JSON.stringify(job, null, 2), "utf8");
+}
+
+export async function readEvalJob(
   projectId: string,
   version: number,
-  actor: string,
-  options: StartEvalOptions = {},
-): Promise<StartedEvalJob> {
-  const releases = options.releaseStore ?? store;
-  const audit = options.audit ?? auditStore;
-
-  if (runningJobs.has(projectId)) {
-    throw new Error(`An eval is already running for "${projectId}"`);
+): Promise<EvalJob | undefined> {
+  try {
+    return JSON.parse(await readFile(jobPath(projectId, version), "utf8")) as EvalJob;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
   }
-  if (!options.agent && !process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is not set on the dashboard server — evals need it");
+}
+
+/** In-process double-launch guard (single dashboard process). */
+const active = new Set<string>();
+
+export function isEvalRunning(projectId: string, version: number): boolean {
+  return active.has(`${projectId}:v${version}`);
+}
+
+function listen(server: HttpServer): Promise<number> {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.once("listening", () => {
+      const address = server.address();
+      resolve(typeof address === "object" && address ? address.port : 0);
+    });
+  });
+}
+
+/**
+ * Validate everything that can fail fast, write the "running" job record,
+ * and return — `run` is the long part, for the caller to schedule (the
+ * server action runs it via next/server `after`, tests await it directly).
+ */
+export async function startEvalJob(
+  deps: EvalJobDeps,
+): Promise<{ job: EvalJob; run: () => Promise<void> }> {
+  const { store, audit, projectId, version, actorId } = deps;
+  const key = `${projectId}:v${version}`;
+  if (active.has(key)) {
+    throw new Error(`An eval for ${projectId} v${version} is already running`);
   }
 
-  const suite = options.suite ?? (await getSuite(projectId));
+  const suite = await getEvalSuite(projectId);
   if (!suite) {
-    throw new Error("No eval suite uploaded for this project — add one in the Evals section");
+    throw new Error("No eval suite for this project — upload one first");
   }
-  const release = (await releases.list(projectId)).find((r) => r.version === version);
+  const release = (await store.list(projectId)).find((r) => r.version === version);
   if (!release) throw new Error(`No release v${version} for project "${projectId}"`);
-  const manifest = await releases.getManifest(projectId, version);
+  if (release.status !== "staged") {
+    throw new Error(`Release v${version} is "${release.status}" — evals run on staged releases`);
+  }
+  const manifest = await store.getManifest(projectId, version);
+  const agent = deps.agent ?? createAnthropicAgent(deps.model);
 
-  const agent = options.agent ?? createAnthropicAgent(options.model);
-  const state: EvalJobState = {
+  const job: EvalJob = {
+    id: randomUUID(),
     projectId,
     version,
     suiteName: suite.name,
     agentModel: agent.model,
     status: "running",
-    completedTasks: 0,
     totalTasks: suite.tasks.length,
+    completedTasks: 0,
     startedAt: new Date().toISOString(),
   };
-  runningJobs.add(projectId);
-  await saveEvalJob(state);
+  active.add(key);
+  try {
+    await writeJob(job);
+  } catch (error) {
+    active.delete(key);
+    throw error;
+  }
 
-  const done = (async (): Promise<EvalJobState> => {
-    let server: Server | undefined;
+  const run = async (): Promise<void> => {
+    // One-time inbound key: the loopback endpoint exists only for this run.
+    const oneTimeKey = randomUUID();
+    let gateway: HttpServer | undefined;
     try {
-      // Loopback-only, unauthenticated by design: the port is random, bound
-      // to 127.0.0.1, and lives only for the duration of the run.
       const app = createGatewayApp([manifest], {
         audit,
         resolveCredential: createCredentialResolver(createVaultFromEnv()),
+        apiKey: oneTimeKey,
       });
-      const port = await new Promise<number>((resolve, reject) => {
-        server = app.listen(0, "127.0.0.1", () => {
-          const address = server?.address();
-          if (address && typeof address === "object") resolve(address.port);
-          else reject(new Error("Ephemeral gateway failed to bind"));
-        });
-        server.on("error", reject);
-      });
+      gateway = app.listen(0, "127.0.0.1");
+      const port = await listen(gateway);
+      const endpoint = {
+        url: `http://127.0.0.1:${port}/mcp/${manifest.serverName}`,
+        apiKey: oneTimeKey,
+      };
 
       const evalRun = await runEvalSuite(
         suite,
-        { url: `http://127.0.0.1:${port}/mcp/${manifest.serverName}` },
+        endpoint,
         agent,
         release.manifestRef,
         projectId,
         {
-          onTaskComplete: (completed) => {
-            state.completedTasks = completed;
-            void saveEvalJob(state);
+          onResult: async (_result, completed) => {
+            job.completedTasks = completed;
+            await writeJob(job);
           },
         },
       );
 
-      await releases.attachEvalRun(projectId, version, evalRun);
-      state.status = "succeeded";
-      state.evalRunId = evalRun.id;
-      state.finishedAt = new Date().toISOString();
-      await saveEvalJob(state);
+      await store.attachEvalRun(projectId, version, evalRun);
+      job.status = "succeeded";
+      job.evalRunId = evalRun.id;
+      job.completedTasks = job.totalTasks;
+      job.finishedAt = new Date().toISOString();
+      await writeJob(job);
       await audit.record({
         projectId,
         kind: "evalCompleted",
-        actor: { type: "user", id: actor },
+        actor: { type: "user", id: actorId },
         detail: {
           version,
           suite: suite.name,
           agentModel: agent.model,
           taskCompletionRate: evalRun.taskCompletionRate,
           toolSelectionAccuracy: evalRun.toolSelectionAccuracy,
-          tasks: evalRun.results.length,
+          evalRunId: evalRun.id,
         },
       });
-      return state;
     } catch (error) {
-      state.status = "failed";
-      state.error = error instanceof Error ? error.message : String(error);
-      state.finishedAt = new Date().toISOString();
-      await saveEvalJob(state);
-      return state;
+      job.status = "failed";
+      job.error = error instanceof Error ? error.message : String(error);
+      job.finishedAt = new Date().toISOString();
+      await writeJob(job);
     } finally {
-      runningJobs.delete(projectId);
-      server?.close();
+      active.delete(key);
+      gateway?.close();
     }
-  })();
+  };
 
-  return { state, done };
+  return { job, run };
 }

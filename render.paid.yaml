@@ -1,0 +1,147 @@
+# FULL dev/prod blueprint (paid plans: starter services, paid Postgres, disk).
+# NOT read by Render (blueprints only use render.yaml) — restore by copying
+# over render.yaml when you add payment info. See docs/guides/deployment.md.
+#
+# Both deployables need long-lived Node hosts (docs/03-architecture.md):
+# the gateway holds MCP sessions / SSE streams, and apps/web runs
+# in-process eval jobs that outlive the HTTP response (ADR-0008).
+#
+# Secrets marked `sync: false` must be filled in once in the Render
+# dashboard — see docs/guides/deployment.md. Credentials never live in
+# this file or in git.
+
+databases:
+  # Release store + encrypted credential vault rows (ADR-0006/0007).
+  # NOTE: Render allows one free Postgres per workspace, and free DBs
+  # expire after 30 days — fine for dev, never for prod.
+  - name: protocolfoundry-db-dev
+    plan: free
+    region: oregon
+    databaseName: protocolfoundry_dev
+    user: protocolfoundry
+
+  - name: protocolfoundry-db-prod
+    plan: basic-256mb
+    region: oregon
+    databaseName: protocolfoundry_prod
+    user: protocolfoundry
+
+envVarGroups:
+  # Secrets that MUST be identical across the gateway and web within one
+  # environment: web encrypts connected credentials with PF_VAULT_KEY and
+  # the gateway decrypts them; scoped tokens are minted and verified with
+  # PF_GATEWAY_TOKEN_SECRET (ADR-0007). Never share these across envs.
+  - name: pf-shared-dev
+    envVars:
+      # 32-byte base64 — generate with `pf keygen` (or `openssl rand -base64 32`).
+      - key: PF_VAULT_KEY
+        sync: false
+      - key: PF_GATEWAY_TOKEN_SECRET
+        generateValue: true
+
+  - name: pf-shared-prod
+    envVars:
+      - key: PF_VAULT_KEY
+        sync: false
+      - key: PF_GATEWAY_TOKEN_SECRET
+        generateValue: true
+
+services:
+  # ---------------------------------------------------------------- dev --
+  - type: web
+    name: protocolfoundry-gateway-dev
+    runtime: node
+    plan: free
+    region: oregon
+    branch: dev
+    autoDeploy: true
+    buildCommand: npm ci && npm run build
+    # Render injects PORT; the gateway reads PF_PORT.
+    startCommand: PF_PORT=$PORT node apps/gateway/dist/index.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PF_DATABASE_URL
+        fromDatabase:
+          name: protocolfoundry-db-dev
+          property: connectionString
+      - fromGroup: pf-shared-dev
+
+  - type: web
+    name: protocolfoundry-web-dev
+    runtime: node
+    plan: free
+    region: oregon
+    branch: dev
+    autoDeploy: true
+    buildCommand: npm ci && npm run build && npm run build -w @protocolfoundry/web
+    startCommand: npx next start apps/web -p $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PF_DATABASE_URL
+        fromDatabase:
+          name: protocolfoundry-db-dev
+          property: connectionString
+      - key: PF_DASHBOARD_SECRET
+        generateValue: true
+      - key: PF_DASHBOARD_PASSWORD
+        sync: false
+      # Curation + eval agent models (packages/curation, packages/evals).
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - fromGroup: pf-shared-dev
+
+  # --------------------------------------------------------------- prod --
+  - type: web
+    name: protocolfoundry-gateway-prod
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: prod
+    autoDeploy: true
+    buildCommand: npm ci && npm run build
+    startCommand: PF_PORT=$PORT node apps/gateway/dist/index.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PF_DATABASE_URL
+        fromDatabase:
+          name: protocolfoundry-db-prod
+          property: connectionString
+      - fromGroup: pf-shared-prod
+
+  - type: web
+    name: protocolfoundry-web-prod
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: prod
+    autoDeploy: true
+    buildCommand: npm ci && npm run build && npm run build -w @protocolfoundry/web
+    startCommand: npx next start apps/web -p $PORT
+    # Forge workspace (pre-release project files, eval suites, job records)
+    # lives on disk — persist it across deploys. Releases themselves are in
+    # Postgres.
+    disk:
+      name: pf-workspace
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PF_WORKSPACE_DIR
+        value: /var/data/workspace
+      - key: PF_DATABASE_URL
+        fromDatabase:
+          name: protocolfoundry-db-prod
+          property: connectionString
+      - key: PF_DASHBOARD_SECRET
+        generateValue: true
+      - key: PF_DASHBOARD_PASSWORD
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - fromGroup: pf-shared-prod

@@ -189,19 +189,28 @@ export class FileReleaseStore implements ReleaseStore {
     return McpServerManifest.parse(JSON.parse(await readFile(file, "utf8")));
   }
 
-  /** Attach (or replace) the eval run for an existing release. */
-  async attachEvalRun(projectId: string, version: number, evalRun: EvalRun): Promise<Release> {
+  /** Attach (or replace) the eval run on a staged release. */
+  async attachEvalRun(
+    projectId: string,
+    version: number,
+    evalRun: EvalRun,
+  ): Promise<Release> {
     const index = await this.readIndex(projectId);
-    const release = index.releases.find((r) => r.version === version);
-    if (!release) throw new Error(`No release v${version} for project "${projectId}"`);
+    const target = index.releases.find((r) => r.version === version);
+    if (!target) throw new Error(`No release v${version} for project "${projectId}"`);
+    if (target.status !== "staged") {
+      throw new Error(
+        `Release v${version} is "${target.status}" — evals attach to staged releases only`,
+      );
+    }
     await writeFile(
       join(this.projectDir(projectId), `v${version}.evalrun.json`),
       JSON.stringify(evalRun, null, 2),
       "utf8",
     );
-    release.evalRunId = evalRun.id;
+    target.evalRunId = evalRun.id;
     await this.writeIndex(index);
-    return release;
+    return target;
   }
 
   /** The eval run stored with a release, if one backed it. */

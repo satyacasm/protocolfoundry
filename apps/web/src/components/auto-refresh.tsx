@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-/** Re-fetches server data on an interval while a background job is running. */
-export function AutoRefresh({ seconds = 4 }: { seconds?: number }) {
+/** Re-fetch server-component data on an interval while a job is running. */
+export function AutoRefresh({ intervalMs = 3000 }: { intervalMs?: number }) {
   const router = useRouter();
   useEffect(() => {
-    const timer = setInterval(() => router.refresh(), seconds * 1000);
+    const timer = setInterval(() => router.refresh(), intervalMs);
     return () => clearInterval(timer);
-  }, [seconds, router]);
+  }, [router, intervalMs]);
   return null;
 }

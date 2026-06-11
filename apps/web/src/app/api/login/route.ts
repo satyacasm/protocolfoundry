@@ -6,6 +6,14 @@ import {
   SESSION_TTL_MS,
   sessionSecret,
 } from "@/lib/session";
+import { redirectTo } from "@/lib/redirects";
+
+function isHttps(request: NextRequest): boolean {
+  return (
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() === "https" ||
+    request.nextUrl.protocol === "https:"
+  );
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const password = process.env.PF_DASHBOARD_PASSWORD;
@@ -16,20 +24,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const target = from.startsWith("/") && !from.startsWith("//") ? from : "/";
 
   if (!password) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return redirectTo("/");
   }
   if (!submitted || !(await passwordMatches(submitted, password))) {
-    const url = new URL("/login", request.url);
-    url.searchParams.set("error", "1");
-    if (target !== "/") url.searchParams.set("from", target);
-    return NextResponse.redirect(url);
+    const params = new URLSearchParams({ error: "1" });
+    if (target !== "/") params.set("from", target);
+    return redirectTo(`/login?${params}`);
   }
 
-  const response = NextResponse.redirect(new URL(target, request.url));
+  const response = redirectTo(target);
   response.cookies.set(SESSION_COOKIE, await createSessionToken(sessionSecret()!), {
     httpOnly: true,
     sameSite: "lax",
-    secure: request.nextUrl.protocol === "https:",
+    secure: isHttps(request),
     path: "/",
     maxAge: SESSION_TTL_MS / 1000,
   });

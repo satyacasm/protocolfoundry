@@ -1,0 +1,48 @@
+{
+  "id": "a41f87d7-7840-4c6d-be52-a1fc019be7ba",
+  "projectId": "shiprocket",
+  "manifestRef": "shiprocket-v2",
+  "agentModel": "claude-opus-4-8",
+  "results": [
+    {
+      "taskId": "courier-overview",
+      "description": "Summarize available couriers",
+      "completed": true,
+      "toolSelectionCorrect": true,
+      "steps": 2,
+      "inputTokens": 179251,
+      "outputTokens": 155
+    },
+    {
+      "taskId": "serviceability-check",
+      "description": "Check route serviceability",
+      "completed": false,
+      "toolSelectionCorrect": true,
+      "steps": 2,
+      "inputTokens": 134949,
+      "outputTokens": 354,
+      "failureReason": "Final answer did not match /(yes|no)/i"
+    },
+    {
+      "taskId": "order-count",
+      "description": "Count orders in the account",
+      "completed": true,
+      "toolSelectionCorrect": true,
+      "steps": 2,
+      "inputTokens": 134816,
+      "outputTokens": 337
+    },
+    {
+      "taskId": "write-blocked",
+      "description": "Writes must be blocked under the read-only token",
+      "completed": true,
+      "toolSelectionCorrect": true,
+      "steps": 2,
+      "inputTokens": 134806,
+      "outputTokens": 108
+    }
+  ],
+  "taskCompletionRate": 0.75,
+  "toolSelectionAccuracy": 1,
+  "ranAt": "2026-06-10T15:03:02.890Z"
+}

@@ -2,7 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { applyCuration, createAnthropicCurator, proposeCuration } from "@protocolfoundry/curation";
-import { ingestSource } from "@protocolfoundry/discovery";
+import {
+  createAnthropicDocsExtractor,
+  ingestSource,
+  ingestUrl,
+} from "@protocolfoundry/discovery";
 import { generateManifest, type GenerateOptions } from "@protocolfoundry/generator";
 import { extractSpecCandidates, looksLikeZip } from "./bundle";
 import { store } from "./data";
@@ -41,8 +45,7 @@ export async function ingestSpec(formData: FormData): Promise<void> {
     }
     projectIdSafe = projectId;
 
-    let raw: string | undefined;
-    let sourceId: string;
+    let graph;
     if (file instanceof File && file.size > 0) {
       const bytes = await file.arrayBuffer();
       if (looksLikeZip(file.name, new Uint8Array(bytes.slice(0, 4)))) {
@@ -70,22 +73,20 @@ export async function ingestSpec(formData: FormData): Promise<void> {
             })`,
           );
         }
-        raw = winner.text;
-        sourceId = `upload:${file.name}!${winner.name}`;
+        graph = ingestSource(winner.text, projectId, `upload:${file.name}!${winner.name}`);
       } else {
-        raw = new TextDecoder().decode(bytes);
-        sourceId = `upload:${file.name}`;
+        graph = ingestSource(new TextDecoder().decode(bytes), projectId, `upload:${file.name}`);
       }
     } else if (specUrl) {
-      const response = await fetch(specUrl, { headers: { Accept: "application/json, text/yaml" } });
-      if (!response.ok) throw new Error(`Fetching spec failed: HTTP ${response.status}`);
-      raw = await response.text();
-      sourceId = `url:${specUrl}`;
+      // Spec URL or a SaaS API-documentation page: ingestUrl auto-detects,
+      // prefers a linked machine-readable spec, then falls back to LLM
+      // extraction of the documented endpoints.
+      graph = await ingestUrl(specUrl, projectId, {
+        ...(process.env.ANTHROPIC_API_KEY ? { extractor: createAnthropicDocsExtractor() } : {}),
+      });
     } else {
-      throw new Error("Provide a spec file or a spec URL");
+      throw new Error("Provide a spec file or a spec / API-docs URL");
     }
-
-    const graph = ingestSource(raw, projectId, sourceId);
     if (graph.operations.length === 0) throw new Error("Spec contains no operations");
     await saveGraph(graph);
   } catch (error) {

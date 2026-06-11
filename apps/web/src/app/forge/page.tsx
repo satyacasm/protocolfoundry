@@ -19,9 +19,11 @@ export default async function ForgePage({
       <p className="eyebrow">Forge</p>
       <h1>New project</h1>
       <p className="lede">
-        Feed the foundry an OpenAPI 3.x spec or Postman collection (JSON, YAML,
-        or a .zip containing one) for an application you own. You&apos;ll review
-        every operation before anything is exposed to agents.
+        Feed the foundry an OpenAPI 3.x spec, a Postman collection, or the
+        URL of an API documentation page for an application you own — linked
+        specs are auto-discovered, otherwise the documented endpoints are
+        AI-extracted. You&apos;ll review every operation before anything is
+        exposed to agents.
       </p>
 
       {notice ? <p className="flash ok-flash">{notice}</p> : null}
@@ -33,7 +35,7 @@ export default async function ForgePage({
       ) : null}
 
       <section className="section" style={{ marginTop: 0 }}>
-        <SectionHead no="01" title="Ingest a spec" />
+        <SectionHead no="01" title="Ingest a spec or docs page" />
         <form action={ingestSpec} className="panel forge-form">
           <label className="gate-label" htmlFor="projectId">
             Project id
@@ -47,18 +49,18 @@ export default async function ForgePage({
             required
           />
           <label className="gate-label" htmlFor="specUrl">
-            Spec URL
+            Spec or API-docs URL
           </label>
           <input
             id="specUrl"
             name="specUrl"
             className="gate-input"
-            placeholder="https://app.example.com/openapi.json"
+            placeholder="https://app.example.com/openapi.json or /docs/api"
           />
           <label className="gate-label" htmlFor="specFile">
             …or upload a spec file
           </label>
-          <input id="specFile" name="specFile" type="file" className="gate-input" accept=".json,.yaml,.yml,.zip" />
+          <input id="specFile" name="specFile" type="file" className="gate-input" accept=".json,.yaml,.yml" />
           <button type="submit" className="gate-button" disabled={!writesEnabled}>
             Ingest
           </button>

@@ -38,9 +38,9 @@ export interface ReleaseStore {
   getManifest(projectId: string, version: number): Promise<McpServerManifest>;
   getEvalRun(projectId: string, version: number): Promise<EvalRun | undefined>;
   /**
-   * Attach (or replace) the eval run for an existing release — the
-   * dashboard's "run eval now" path. The manifest stays immutable; the eval
-   * is evidence about it and re-runs may update it.
+   * Attach (or replace) the eval run backing a STAGED release — evals run
+   * after the forge stages a release, before promotion. Live/retired releases
+   * are sealed history: their eval is the one they were promoted on.
    */
   attachEvalRun(projectId: string, version: number, evalRun: EvalRun): Promise<Release>;
   /**

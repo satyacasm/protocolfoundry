@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Theme 1 — Porcelain (Apple studio light)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #fbfbfd;
+    --ink: #1d1d1f;
+    --ink-2: #6e6e73;
+    --hairline: rgba(0, 0, 0, 0.08);
+    --accent: #0066cc;
+    --good: #1d7d4f;
+    --card: #ffffff;
+    --radius: 22px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Instrument Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .display { font-family: "Schibsted Grotesk", sans-serif; letter-spacing: -0.03em; }
+  .mono { font-family: "Spline Sans Mono", monospace; }
+
+  nav {
+    position: fixed; inset: 0 0 auto 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 56px;
+    background: rgba(251, 251, 253, 0.72);
+    backdrop-filter: blur(20px) saturate(1.6);
+    border-bottom: 1px solid var(--hairline);
+  }
+  nav .wordmark { font-family: "Schibsted Grotesk"; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+  nav .links { display: flex; gap: 36px; font-size: 13.5px; color: var(--ink-2); }
+  nav .links span.active { color: var(--ink); font-weight: 600; }
+  nav .cta {
+    font-size: 12.5px; font-weight: 600; color: #fff; background: var(--ink);
+    padding: 7px 16px; border-radius: 99px;
+  }
+
+  .hero { padding: 150px 48px 0; text-align: center; }
+  .hero .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 26px;
+  }
+  .hero .eyebrow::before, .hero .eyebrow::after { content: ""; width: 28px; height: 1px; background: currentColor; opacity: .4; }
+  .hero h1 {
+    font-size: clamp(56px, 7.4vw, 104px); font-weight: 900; line-height: 0.98;
+    max-width: 13ch; margin: 0 auto;
+  }
+  .hero h1 .quiet { color: #b9b9c0; }
+  .hero p.lede {
+    font-size: 21px; line-height: 1.5; color: var(--ink-2);
+    max-width: 56ch; margin: 30px auto 0;
+  }
+  .hero .actions { margin-top: 36px; display: flex; gap: 14px; justify-content: center; }
+  .btn-primary { background: var(--accent); color: #fff; font-weight: 600; font-size: 15px; padding: 13px 28px; border-radius: 99px; }
+  .btn-ghost { color: var(--accent); font-weight: 600; font-size: 15px; padding: 13px 10px; }
+  .btn-ghost::after { content: " ›"; }
+
+  /* ------- product stage: the dashboard "device shot", Apple style ------- */
+  .stage { margin-top: 84px; padding: 0 48px 40px; perspective: 1600px; }
+  .device {
+    max-width: 1180px; margin: 0 auto;
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      0 1px 2px rgba(0,0,0,.04),
+      0 24px 48px -12px rgba(29,29,31,.14),
+      0 80px 140px -40px rgba(29,29,31,.18);
+    overflow: hidden;
+    transform: rotateX(6deg) translateY(0);
+    transform-origin: 50% 0;
+  }
+  .device .chrome {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px; border-bottom: 1px solid var(--hairline);
+    background: linear-gradient(#fdfdfe, #f7f7f9);
+  }
+  .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #e4e4e8; }
+  .chrome .url {
+    margin-left: 14px; font-size: 11.5px; color: var(--ink-2);
+    background: #f0f0f3; border-radius: 7px; padding: 5px 14px;
+  }
+  .panel { display: grid; grid-template-columns: 220px 1fr; min-height: 460px; }
+  .side {
+    border-right: 1px solid var(--hairline); padding: 22px 18px;
+    font-size: 13px; color: var(--ink-2); background: #fcfcfd;
+  }
+  .side .item { padding: 8px 12px; border-radius: 9px; margin-bottom: 2px; }
+  .side .item.on { background: #eef4fc; color: var(--accent); font-weight: 600; }
+  .main { padding: 26px 30px; }
+  .main h3 { font-size: 19px; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .main .sub { font-size: 12.5px; color: var(--ink-2); margin-bottom: 22px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .pcard {
+    border: 1px solid var(--hairline); border-radius: 14px; padding: 18px;
+    transition: box-shadow .3s;
+  }
+  .pcard .name { font-weight: 600; font-size: 14.5px; display: flex; justify-content: space-between; }
+  .pcard .live { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--good); background: #e8f5ee; padding: 3px 8px; border-radius: 99px; }
+  .pcard .staged { color: #8a6d00; background: #fdf3d7; }
+  .pcard .meta { font-size: 12px; color: var(--ink-2); margin-top: 6px; }
+  .score { margin-top: 16px; }
+  .score .bar { height: 5px; border-radius: 99px; background: #ededf0; overflow: hidden; }
+  .score .bar i { display: block; height: 100%; border-radius: 99px; background: var(--good); }
+  .score .lbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-2); margin-top: 7px; }
+  .score .lbl b { color: var(--ink); font-weight: 600; }
+
+  /* ------------------------------ stats band ----------------------------- */
+  .band { padding: 110px 48px 90px; text-align: center; }
+  .band h2 { font-size: clamp(34px, 4vw, 52px); font-weight: 900; letter-spacing: -0.03em; }
+  .band h2 em { font-style: normal; color: var(--ink-2); }
+  .stats { display: flex; justify-content: center; gap: 90px; margin-top: 60px; }
+  .stat .n { font-family: "Schibsted Grotesk"; font-size: 58px; font-weight: 900; letter-spacing: -0.04em; }
+  .stat .n sup { font-size: 24px; color: var(--accent); }
+  .stat .d { font-size: 13.5px; color: var(--ink-2); margin-top: 6px; }
+
+  /* --------------------------- feature trio ------------------------------ */
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1180px; margin: 0 auto; padding: 0 48px 120px; }
+  .feat {
+    background: var(--card); border: 1px solid var(--hairline); border-radius: var(--radius);
+    padding: 36px 32px 40px; text-align: left;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 18px 40px -24px rgba(29,29,31,.12);
+  }
+  .feat .k { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+  .feat h4 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 14px 0 10px; }
+  .feat p { font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+  .feat .art { height: 120px; border-radius: 14px; margin-top: 26px; border: 1px solid var(--hairline);
+    background: radial-gradient(120% 140% at 20% 0%, #eaf2fd 0%, #fbfbfd 55%); position: relative; overflow: hidden; }
+  .feat .art .tick { position: absolute; font-family: "Spline Sans Mono"; font-size: 10.5px; color: var(--ink-2); }
+  footer { border-top: 1px solid var(--hairline); padding: 26px 48px; font-size: 12px; color: var(--ink-2); display: flex; justify-content: space-between; }
+
+  a { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+  <nav>
+    <span class="wordmark">ProtocolFoundry</span>
+    <div class="links"><span class="active">Overview</span><span>Forge</span><span>Releases</span><span>Evals</span><span>Audit</span></div>
+    <span class="cta">Open console</span>
+  </nav>
+
+  <section class="hero">
+    <span class="eyebrow">Control plane · v0.9</span>
+    <h1 class="display">APIs in.<br /><span class="quiet">Eval‑tested</span> MCP servers out.</h1>
+    <p class="lede">ProtocolFoundry turns the applications you own into hosted, eval‑gated MCP servers — curated tools, scoped tokens, immutable releases, and a full audit trail. One gateway, zero codegen.</p>
+    <div class="actions"><span class="btn-primary">Forge a server</span><span class="btn-ghost">Watch the pipeline</span></div>
+  </section>
+
+  <section class="stage">
+    <div class="device">
+      <div class="chrome"><i></i><i></i><i></i><span class="url">console.protocolfoundry.dev / overview</span></div>
+      <div class="panel">
+        <div class="side">
+          <div class="item on">⌂ &nbsp;Overview</div>
+          <div class="item">⚒ &nbsp;Forge</div>
+          <div class="item">⛁ &nbsp;Releases</div>
+          <div class="item">✓ &nbsp;Eval runs</div>
+          <div class="item">≡ &nbsp;Audit log</div>
+        </div>
+        <div class="main">
+          <h3 class="display">Live servers</h3>
+          <div class="sub">3 live · 1 staged · gateway us‑west healthy</div>
+          <div class="cards">
+            <div class="pcard">
+              <div class="name">shiprocket <span class="live">LIVE v4</span></div>
+              <div class="meta">12 tools · curated from Postman</div>
+              <div class="score"><div class="bar"><i style="width:92%"></i></div><div class="lbl"><span>eval pass</span><b>92%</b></div></div>
+            </div>
+            <div class="pcard">
+              <div class="name">petstore <span class="live">LIVE v2</span></div>
+              <div class="meta">8 tools · OpenAPI ingest</div>
+              <div class="score"><div class="bar"><i style="width:100%"></i></div><div class="lbl"><span>eval pass</span><b>100%</b></div></div>
+            </div>
+            <div class="pcard">
+              <div class="name">billing‑api <span class="live staged">STAGED v1</span></div>
+              <div class="meta">14 tools · awaiting eval gate</div>
+              <div class="score"><div class="bar"><i style="width:71%;background:#c89400"></i></div><div class="lbl"><span>eval running…</span><b>71%</b></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <h2 class="display">Ship tools agents can trust.<br /><em>Every release passes the gate.</em></h2>
+    <div class="stats">
+      <div class="stat"><div class="n">47<sup>✓</sup></div><div class="d">tests green on every push</div></div>
+      <div class="stat"><div class="n">1:1<sup>×</sup></div><div class="d">manifest‑interpreted — no codegen</div></div>
+      <div class="stat"><div class="n">0<sup>🔒</sup></div><div class="d">credentials in prompts, logs or manifests</div></div>
+    </div>
+  </section>
+
+  <section class="trio">
+    <div class="feat">
+      <span class="k">Discover</span>
+      <h4 class="display">Spec → graph</h4>
+      <p>Point at an OpenAPI spec or Postman collection. The ingestor builds a workflow graph of everything your API can do.</p>
+      <div class="art"><span class="tick" style="top:18px;left:18px">GET /orders</span><span class="tick" style="top:48px;left:64px">POST /shipments</span><span class="tick" style="top:78px;left:30px">GET /tracking/:id</span></div>
+    </div>
+    <div class="feat">
+      <span class="k">Curate</span>
+      <h4 class="display">Tools, not endpoints</h4>
+      <p>An LLM curation pass composes task‑level tools; a human reviews every proposal before it reaches a manifest.</p>
+      <div class="art"><span class="tick" style="top:30px;left:22px">create_shipment ✦</span><span class="tick" style="top:62px;left:54px">track_order ✦</span></div>
+    </div>
+    <div class="feat">
+      <span class="k">Gate</span>
+      <h4 class="display">Evals before traffic</h4>
+      <p>A real agent loop runs your suite against a staged release. Only passing releases get promoted to the gateway.</p>
+      <div class="art"><span class="tick" style="top:24px;left:20px">suite: read‑only ✓ 9/9</span><span class="tick" style="top:54px;left:42px">write‑block probe ✓</span><span class="tick" style="top:84px;left:24px">promote v4 → live</span></div>
+    </div>
+  </section>
+
+  <footer><span>© 2026 ProtocolFoundry</span><span class="mono">render: porcelain / light studio</span></footer>
+
+  <script>
+    // Scroll choreography (Apple-style): device sheet un-tilts and settles as it
+    // enters; sections soft-rise. Screenshots show the resting frame.
+    const device = document.querySelector('.device');
+    addEventListener('scroll', () => {
+      const r = device.getBoundingClientRect();
+      const p = Math.min(1, Math.max(0, 1 - r.top / innerHeight));
+      device.style.transform = `rotateX(${6 - 6 * p}deg) translateY(${-12 * p}px)`;
+    }, { passive: true });
+  </script>
+</body>
+</html>

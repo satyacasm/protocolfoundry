@@ -1,14 +1,19 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { isClaudeModelAlias, resolveClaudeModel } from "@protocolfoundry/core";
 import { generateCoverageSuite, parseEvalSuite } from "@protocolfoundry/evals";
-import { store } from "./data";
+import { auditStore, store } from "./data";
 import { startEvalJob } from "./eval-jobs";
 import { appendAudit, requireOperator } from "./operator";
-import { saveSuite } from "./workspace";
+import { saveEvalSuite } from "./workspace";
 
-/** Eval write paths: suite upload + fire-and-forget eval job. */
+/**
+ * Eval write paths: suite upload + generating coverage suites + triggering
+ * eval jobs on staged releases. Jobs run after the response is sent
+ * (next/server `after`) — the page polls the job record for progress.
+ */
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message.slice(0, 300))}`);
@@ -27,13 +32,11 @@ export async function uploadEvalSuite(formData: FormData): Promise<void> {
   try {
     const file = formData.get("suiteFile");
     const pasted = String(formData.get("suiteJson") ?? "").trim();
-    let raw: string;
-    if (file instanceof File && file.size > 0) raw = await file.text();
-    else if (pasted) raw = pasted;
-    else throw new Error("Provide a suite file or paste suite JSON");
-
+    const raw =
+      file instanceof File && file.size > 0 ? await file.text() : pasted;
+    if (!raw) throw new Error("Provide a suite file or paste suite JSON");
     const suite = parseEvalSuite(raw);
-    await saveSuite(projectId, suite);
+    await saveEvalSuite(projectId, suite);
     taskCount = suite.tasks.length;
     await appendAudit(
       "manifestChange",
@@ -44,7 +47,7 @@ export async function uploadEvalSuite(formData: FormData): Promise<void> {
   } catch (error) {
     fail(back, error instanceof Error ? error.message : String(error));
   }
-  redirect(`${back}?notice=${encodeURIComponent(`Eval suite saved (${taskCount} tasks)`)}`);
+  redirect(`${back}?notice=${encodeURIComponent(`Eval suite saved (${taskCount} task(s))`)}`);
 }
 
 export async function generateSuiteFromManifest(formData: FormData): Promise<void> {
@@ -62,7 +65,7 @@ export async function generateSuiteFromManifest(formData: FormData): Promise<voi
   try {
     const manifest = await store.getManifest(projectId, version);
     const { suite, skippedWriteTools } = generateCoverageSuite(manifest, { includeWrites });
-    await saveSuite(projectId, suite);
+    await saveEvalSuite(projectId, suite);
     await appendAudit(
       "manifestChange",
       projectId,
@@ -80,9 +83,9 @@ export async function generateSuiteFromManifest(formData: FormData): Promise<voi
   redirect(`${back}?notice=${encodeURIComponent(notice.slice(0, 400))}`);
 }
 
-export async function runEval(formData: FormData): Promise<void> {
+export async function startEval(formData: FormData): Promise<void> {
   const projectId = String(formData.get("projectId") ?? "");
-  const version = Number(formData.get("version") ?? 0);
+  const version = Number(formData.get("version"));
   const modelAlias = String(formData.get("model") ?? "haiku");
   const back = `/projects/${projectId}`;
   let actor: string;
@@ -95,15 +98,23 @@ export async function runEval(formData: FormData): Promise<void> {
     fail(back, `Unknown model "${modelAlias}" — pick haiku, sonnet, opus, or fable`);
   }
   try {
-    const { done } = await startEvalJob(projectId, version, actor, {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not set on the dashboard server — evals need it");
+    }
+    if (!Number.isInteger(version) || version < 1) throw new Error("Invalid release version");
+    const { run } = await startEvalJob({
+      store,
+      audit: auditStore,
+      projectId,
+      version,
+      actorId: actor,
       model: resolveClaudeModel(modelAlias),
     });
-    // Fire and forget: the job persists its own progress/outcome; the page
-    // polls the job file. Swallow here so an unhandled rejection can't crash
-    // the server — failures land in the job state.
-    void done.catch(() => {});
+    after(run);
   } catch (error) {
     fail(back, error instanceof Error ? error.message : String(error));
   }
-  redirect(`${back}?notice=${encodeURIComponent(`Eval started for v${version} — progress updates below`)}`);
+  redirect(
+    `${back}?notice=${encodeURIComponent(`Eval started for v${version} — progress updates below`)}`,
+  );
 }

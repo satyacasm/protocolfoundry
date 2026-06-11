@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="key" cx="50%" cy="-12%" r="85%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.45" stop-color="#f6f8fb"/>
+      <stop offset="1" stop-color="#eceff4"/>
+    </radialGradient>
+    <radialGradient id="warm" cx="78%" cy="8%" r="55%">
+      <stop offset="0" stop-color="#eef3fb" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#eef3fb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cool" cx="14%" cy="22%" r="50%">
+      <stop offset="0" stop-color="#e9eef6" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#e9eef6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dfe4eb" stop-opacity="0"/>
+      <stop offset="1" stop-color="#dde3ea" stop-opacity="0.85"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#key)"/>
+  <rect width="1600" height="1000" fill="url(#warm)"/>
+  <rect width="1600" height="1000" fill="url(#cool)"/>
+  <rect y="640" width="1600" height="360" fill="url(#floor)"/>
+  <ellipse cx="800" cy="985" rx="640" ry="60" fill="#cdd5df" opacity="0.45"/>
+</svg>
