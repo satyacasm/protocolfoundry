@@ -7,6 +7,52 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 15: production deployment on Render (ADR-0009)
+
+### Done
+
+- **ADR-0009**: Render blueprint deployment, branch-per-environment.
+  Root `render.yaml` declares 4 services (gateway + web × dev/prod) and
+  2 Postgres DBs; each service pins its branch with `autoDeploy: true`,
+  so **every push to `dev`/`prod` deploys that environment** — no deploy
+  secrets in GitHub.
+- New long-lived branches **`dev`** and **`prod`** (both cut from the same
+  commit, so the first blueprint sync deploys identical code to both).
+  Promotion flow: feature → `dev` (PR) → `prod` (PR). `main` stays default.
+- **CI** (`.github/workflows/ci.yml`): npm ci → full test suite (builds all
+  workspaces first) → typecheck → web build, on pushes/PRs to
+  `main`/`dev`/`prod`. Render services should use "Auto-Deploy: After CI
+  Checks Pass".
+- Per-env secret wiring: env groups `pf-shared-{dev,prod}` keep
+  `PF_VAULT_KEY` + `PF_GATEWAY_TOKEN_SECRET` identical across gateway/web
+  within an env, never across envs. Operator supplies `PF_VAULT_KEY`,
+  `PF_DASHBOARD_PASSWORD`, `ANTHROPIC_API_KEY` in the Render dashboard
+  (documented in `docs/guides/deployment.md`); the rest are
+  `generateValue`/`fromDatabase`.
+- Prod web gets a 1 GB disk for the Forge workspace
+  (`PF_WORKSPACE_DIR=/var/data/workspace`); dev workspace stays ephemeral.
+- Architecture doc deploy section synced to Render/ADR-0009.
+
+### Decisions
+
+- Render over Fly/Railway (native branch auto-deploy, blueprint IaC, no
+  Docker needed for a single-tree monorepo) — ADR-0009.
+
+### Open questions
+
+- When does dev's free Postgres expiry (30 days) become annoying enough to
+  pay for basic-256mb in dev too?
+- Custom domains + `PF_AUTH_SERVER_URL` (OAuth resource metadata) once a
+  real authorization server exists.
+
+### Next steps
+
+- Operator: connect the blueprint in the Render dashboard and fill the
+  `sync: false` secrets (one-time, see `docs/guides/deployment.md`).
+- Flip the four services to "Auto-Deploy: After CI Checks Pass".
+
+---
+
 ## 2026-06-11 — Session 14: eval runs from the dashboard (ADR-0008)
 
 ### Done

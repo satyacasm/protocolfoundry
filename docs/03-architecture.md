@@ -93,6 +93,8 @@ This is the single most important early architecture choice — it is what makes
 - Postgres (likely Neon/Supabase). Eval runs triggered from the dashboard
   execute as in-process jobs against an ephemeral loopback gateway (ADR-0008);
   a real DB-backed queue arrives with multi-tenancy.
-- Deploy: long-lived Node hosts (Fly/Railway/containers) for BOTH the gateway
-  (MCP sessions, SSE streams) and `apps/web` (in-process eval jobs continue
-  after the response — serverless would kill them).
+- Deploy: long-lived Node hosts for BOTH the gateway (MCP sessions, SSE
+  streams) and `apps/web` (in-process eval jobs continue after the response —
+  serverless would kill them). Hosted on Render via the root `render.yaml`
+  blueprint: dev + prod environments, branch-per-environment auto-deploy
+  (ADR-0009, `docs/guides/deployment.md`).
