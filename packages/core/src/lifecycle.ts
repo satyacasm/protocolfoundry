@@ -75,6 +75,7 @@ export const AuditEvent = z.object({
     "manifestChange",
     "releasePromoted",
     "releaseRolledBack",
+    "evalCompleted",
     "credentialConnected",
     "credentialRevoked",
     "approvalGranted",

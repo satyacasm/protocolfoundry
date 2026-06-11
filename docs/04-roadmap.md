@@ -103,6 +103,12 @@ the large-spec campaign.
       read/write/destructive by effect; `pf token issue` mints expiring,
       server-bound, scope-carrying tokens; gateway enforces per tool call;
       RFC 9728 metadata + WWW-Authenticate on 401.
+- [x] Eval runs from the dashboard (ADR-0008): per-project eval suites
+      uploaded/pasted in the UI (zod-validated); "Run eval" on a staged
+      release hosts its manifest on an ephemeral loopback gateway and runs
+      the agent suite as an in-process job with live per-task progress; the
+      EvalRun attaches to the staged release (`attachEvalRun`, both store
+      backends) and completion is audited (`evalCompleted`).
 - [ ] Full OAuth 2.1 authorization-code flow via external AS (deferred —
       ADR-0007; metadata endpoint already advertises authorization servers)
 - [ ] Multi-tenancy hardening, usage metering, billing (Stripe), white-label CNAME

@@ -238,8 +238,11 @@ see, full eval reports, and the audit log with approval-gate events.
 > 1–3 in the browser: upload the spec (or paste its URL), review/check the
 > operations, optionally run LLM curation and approve its proposals item by
 > item, and stage the release — then promote it from the project page.
+> Step 6 too: upload the eval suite on the project page and hit **Run eval**
+> on a staged release — the run executes in the background (live progress on
+> the page) and its scores attach to the release before you promote.
 > Requires `PF_DASHBOARD_PASSWORD` (writes are disabled in open mode) and,
-> for the curation button, `ANTHROPIC_API_KEY` on the dashboard server.
+> for the curation/eval buttons, `ANTHROPIC_API_KEY` on the dashboard server.
 
 ## Troubleshooting
 

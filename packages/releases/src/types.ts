@@ -38,6 +38,12 @@ export interface ReleaseStore {
   getManifest(projectId: string, version: number): Promise<McpServerManifest>;
   getEvalRun(projectId: string, version: number): Promise<EvalRun | undefined>;
   /**
+   * Attach (or replace) the eval run backing a STAGED release — evals run
+   * after the forge stages a release, before promotion. Live/retired releases
+   * are sealed history: their eval is the one they were promoted on.
+   */
+  attachEvalRun(projectId: string, version: number, evalRun: EvalRun): Promise<Release>;
+  /**
    * Optional cheap change indicator for a project (e.g. index file mtime).
    * Sources use it to skip reloads; absence means reload on cache expiry.
    */

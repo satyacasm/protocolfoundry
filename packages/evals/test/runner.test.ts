@@ -8,7 +8,7 @@ import { ingestOpenApi } from "@protocolfoundry/discovery";
 import { generateManifest } from "@protocolfoundry/generator";
 import { AuditLog, createGatewayApp } from "@protocolfoundry/gateway";
 import { renderComparisonReport, renderEvalReport } from "../src/report.js";
-import { runEvalSuite, type AgentModel, type AgentTurn } from "../src/runner.js";
+import { parseEvalSuite, runEvalSuite, type AgentModel, type AgentTurn } from "../src/runner.js";
 import { createTaskboardApp } from "../../../examples/taskboard/upstream.js";
 
 const SPEC_PATH = join(import.meta.dirname, "../../../examples/taskboard/openapi.json");
@@ -129,13 +129,20 @@ const SUITE = {
 
 describe("runEvalSuite", () => {
   it("scores a capable agent at 100% completion and correct tool selection", async () => {
+    const progress: Array<[string, number, number]> = [];
     const run = await runEvalSuite(
       SUITE,
       { url: endpointUrl, apiKey: GATEWAY_KEY },
       createScriptedAgent(),
       "manifest:test",
       "taskboard",
+      {
+        onResult: async (result, completed, total) => {
+          progress.push([result.taskId, completed, total]);
+        },
+      },
     );
+    expect(progress).toEqual([["create-complete", 1, 1]]);
     expect(run.taskCompletionRate).toBe(1);
     expect(run.toolSelectionAccuracy).toBe(1);
     expect(run.results[0]!.steps).toBe(3);
@@ -170,5 +177,20 @@ describe("runEvalSuite", () => {
       candidate: "curated",
     });
     expect(comparison).toContain("+100pp");
+  });
+});
+
+describe("parseEvalSuite", () => {
+  it("accepts valid suites (string or object) and rejects malformed ones", () => {
+    expect(parseEvalSuite(JSON.stringify(SUITE)).tasks).toHaveLength(1);
+    expect(parseEvalSuite(SUITE).name).toBe("taskboard-basics");
+    expect(() => parseEvalSuite({ name: "empty", tasks: [] })).toThrow();
+    expect(() => parseEvalSuite("not json")).toThrow();
+    expect(() =>
+      parseEvalSuite({
+        name: "bad-regex",
+        tasks: [{ ...SUITE.tasks[0], successPattern: "(" }],
+      }),
+    ).toThrow();
   });
 });

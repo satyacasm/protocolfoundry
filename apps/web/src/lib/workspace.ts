@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CurationProposal, WorkflowGraph } from "@protocolfoundry/core";
+import { parseEvalSuite, type EvalSuite } from "@protocolfoundry/evals";
 
 /**
  * The "forge" workspace: in-progress artifacts (ingested graphs, curation
@@ -10,6 +11,10 @@ import { CurationProposal, WorkflowGraph } from "@protocolfoundry/core";
  */
 
 const root = (): string => process.env.PF_WORKSPACE_DIR ?? "workspace";
+
+export function projectWorkspaceDir(projectId: string): string {
+  return projectDir(projectId);
+}
 
 function projectDir(projectId: string): string {
   if (!/^[A-Za-z0-9_-]+$/.test(projectId)) {
@@ -47,6 +52,18 @@ export async function saveProposal(proposal: CurationProposal): Promise<void> {
 export async function getProposal(projectId: string): Promise<CurationProposal | undefined> {
   const raw = await readJson(join(projectDir(projectId), "proposal.json"));
   return raw === undefined ? undefined : CurationProposal.parse(raw);
+}
+
+/** The project's agent-usability eval suite (validated, dashboard-managed). */
+export async function saveEvalSuite(projectId: string, suite: EvalSuite): Promise<void> {
+  const dir = projectDir(projectId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "eval-suite.json"), JSON.stringify(suite, null, 2), "utf8");
+}
+
+export async function getEvalSuite(projectId: string): Promise<EvalSuite | undefined> {
+  const raw = await readJson(join(projectDir(projectId), "eval-suite.json"));
+  return raw === undefined ? undefined : parseEvalSuite(raw);
 }
 
 export interface ForgeProject {

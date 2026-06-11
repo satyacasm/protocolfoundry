@@ -90,6 +90,9 @@ This is the single most important early architecture choice — it is what makes
 - `packages/discovery` — ingestors + LLM graph analysis (Claude via Anthropic SDK).
 - `packages/generator` — graph → manifest.
 - `packages/evals` — agent-loop harness.
-- Postgres (likely Neon/Supabase) + a job queue for discovery/eval runs.
-- Deploy: Vercel for `apps/web`; long-lived Node host (Fly/Railway/containers) for
-  the gateway — MCP sessions and SSE streams want a persistent runtime.
+- Postgres (likely Neon/Supabase). Eval runs triggered from the dashboard
+  execute as in-process jobs against an ephemeral loopback gateway (ADR-0008);
+  a real DB-backed queue arrives with multi-tenancy.
+- Deploy: long-lived Node hosts (Fly/Railway/containers) for BOTH the gateway
+  (MCP sessions, SSE streams) and `apps/web` (in-process eval jobs continue
+  after the response — serverless would kill them).

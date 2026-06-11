@@ -7,6 +7,54 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 14: eval runs from the dashboard (ADR-0008)
+
+### Done
+
+- **The browser loop is closed**: ingest → curate → stage → **eval** →
+  promote, all from the dashboard. The "no eval" chip on forge-staged
+  releases now resolves in the UI instead of via `pf eval`.
+- **`ReleaseStore.attachEvalRun`** (file + Postgres): attach/replace the
+  eval on a *staged* release (latest run wins, `evalRunId` updated);
+  live/retired releases are sealed — their eval is what they were promoted
+  on. Manifest immutability untouched.
+- **In-process eval job runner** (`apps/web/src/lib/eval-jobs.ts`):
+  - hosts the staged manifest on an **ephemeral loopback gateway**
+    (`createGatewayApp` on `127.0.0.1:0`, one-time key, production env→vault
+    credential resolver, shared audit store — eval tool calls hit the real
+    upstream and are audited like real traffic);
+  - file-backed job records (`workspace/<project>/jobs/eval-v<N>.json`) with
+    per-task progress via a new `runEvalSuite` `onResult` callback;
+  - server action validates fast, then schedules the run with Next `after()`;
+    project page auto-refreshes while a job is active; stale "running"
+    records (server restart mid-run) surface as *interrupted*;
+  - success appends a new `evalCompleted` audit event (kind added to core +
+    audit viewer filters, alongside `manifestChange`).
+- **Eval suites are dashboard-managed**: upload/paste JSON on the project
+  page, zod-validated (`parseEvalSuite`, also checks success-pattern
+  regexes), stored in the forge workspace, audited.
+- Architecture doc synced: `apps/web` now needs a long-lived Node host
+  (in-process jobs outlive the response — serverless would kill them).
+- 47 tests green (6 new): attachEvalRun semantics on both store backends,
+  suite validation + progress callback, and a dashboard-job e2e (scripted
+  agent → ephemeral gateway → eval attached, audit trail clean of secrets).
+- Verified live via no-JS form replay: suite upload (303 + notice, table
+  rendered, Run eval enabled) → Run eval with a dummy API key → job executed
+  after the response and recorded a clean `failed` with the real Anthropic
+  401 → page shows the failure chip; unauthenticated POST still 307s to
+  /login. `next build` green with the gateway/express server-external
+  packages.
+
+### Next steps
+
+1. Eval Shiprocket with a real account token (user) — large-spec eval
+   campaign continues.
+2. Metering/billing, drift detection, design partners.
+3. Multi-tenant job queue (DB-backed) when the in-process runner stops being
+   enough — job-record format is already the UI contract.
+
+---
+
 ## 2026-06-10 — Session 13: native Postman ingestor + Shiprocket conversion
 
 ### Done

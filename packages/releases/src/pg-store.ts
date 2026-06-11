@@ -223,6 +223,31 @@ export class PgReleaseStore implements ReleaseStore {
     return McpServerManifest.parse(parseJsonb(rows[0]["manifest"]));
   }
 
+  async attachEvalRun(
+    projectId: string,
+    version: number,
+    evalRun: EvalRun,
+  ): Promise<Release> {
+    return this.tx(async (client) => {
+      const { rows } = await client.query(
+        "SELECT * FROM releases WHERE project_id = $1 AND version = $2",
+        [projectId, version],
+      );
+      const target = rows[0];
+      if (!target) throw new Error(`No release v${version} for project "${projectId}"`);
+      if (target["status"] !== "staged") {
+        throw new Error(
+          `Release v${version} is "${target["status"]}" — evals attach to staged releases only`,
+        );
+      }
+      await client.query(
+        "UPDATE releases SET eval_run = $1::jsonb, eval_run_id = $2 WHERE project_id = $3 AND version = $4",
+        [JSON.stringify(evalRun), evalRun.id, projectId, version],
+      );
+      return rowToRelease({ ...target, eval_run_id: evalRun.id });
+    });
+  }
+
   async getEvalRun(projectId: string, version: number): Promise<EvalRun | undefined> {
     await this.ensureSchema();
     const { rows } = await this.pool.query(

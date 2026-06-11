@@ -96,6 +96,32 @@ describe("FileReleaseStore", () => {
     await expect(store.promote("taskboard", 2)).rejects.toThrow(/only staged/);
   });
 
+  it("attaches eval runs to staged releases only, replacing earlier runs", async () => {
+    const store = new FileReleaseStore(join(rootDir, "attach"));
+    const v1 = await store.createRelease(manifest); // forge path: no eval yet
+    expect(v1.evalRunId).toBeUndefined();
+
+    const first = evalRun(0.6, 0.7);
+    const attached = await store.attachEvalRun("taskboard", 1, first);
+    expect(attached.evalRunId).toBe(first.id);
+    expect((await store.getEvalRun("taskboard", 1))!.id).toBe(first.id);
+
+    // re-running replaces the previous run (latest wins)
+    const second = evalRun(0.9, 1);
+    await store.attachEvalRun("taskboard", 1, second);
+    expect((await store.getEvalRun("taskboard", 1))!.id).toBe(second.id);
+    expect((await store.list("taskboard"))[0]!.evalRunId).toBe(second.id);
+
+    // live releases are sealed history
+    await store.promote("taskboard", 1);
+    await expect(store.attachEvalRun("taskboard", 1, evalRun(1, 1))).rejects.toThrow(
+      /staged releases only/,
+    );
+    await expect(store.attachEvalRun("taskboard", 9, evalRun(1, 1))).rejects.toThrow(
+      /No release v9/,
+    );
+  });
+
   it("keeps released manifests immutable on disk", async () => {
     const store = new FileReleaseStore(join(rootDir, "immutable"));
     const v1 = await store.createRelease(manifest, { evalRun: evalRun(1, 1), gate: GATE });
