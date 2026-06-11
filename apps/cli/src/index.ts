@@ -2,8 +2,15 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { CurationProposal, EvalRun, McpServerManifest, WorkflowGraph } from "@protocolfoundry/core";
 import { randomBytes } from "node:crypto";
-import { issueToken } from "@protocolfoundry/gateway";
-import { createReleaseStoreFromEnv, ReleaseGateError } from "@protocolfoundry/releases";
+import { issueToken, createGatewayApp, loadManifests, createCredentialResolver } from "@protocolfoundry/gateway";
+import { createAuditStoreFromEnv } from "@protocolfoundry/audit";
+import {
+  createReleaseStoreFromEnv,
+  describeReleaseBackend,
+  releaseManifestSource,
+  staticManifestSource,
+  ReleaseGateError,
+} from "@protocolfoundry/releases";
 import { createVaultFromEnv } from "@protocolfoundry/vault";
 import {
   applyCuration,
@@ -27,11 +34,13 @@ const USAGE = `ProtocolFoundry CLI — spec-to-server pipeline
 
 Usage:
   pf ingest <spec-file-or-url> --project <id> [-o <graph.json>] [--model <id>]
+            [--max-pages <n>] [--depth <n>]
       Ingest an OpenAPI 3.x spec (JSON/YAML) or a Postman Collection v2.1
       (auto-detected) into a workflow graph. With an http(s) URL, also
       accepts a SaaS API-documentation PAGE: a linked machine-readable
-      spec is auto-discovered when present; otherwise the endpoints are
-      LLM-extracted from the page (requires ANTHROPIC_API_KEY).
+      spec is auto-discovered when present; otherwise same-site doc pages
+      are crawled (default 12 pages, 2 hops — tune with --max-pages/--depth)
+      and the endpoints are LLM-extracted (requires ANTHROPIC_API_KEY).
 
   pf generate <graph.json> [--name <serverName>] [--select <op1,op2,...>]
               [--base-url <url>] [-o <manifest.json>]
@@ -87,8 +96,14 @@ Usage:
       Mint a scoped gateway access token (pft_...). Requires
       PF_GATEWAY_TOKEN_SECRET. Scopes are enforced per tool.
 
+  pf serve [--port <port>] [--manifest <path>] [--db <url>] [--dir <releases-dir>]
+      Start the MCP gateway server. Serves either a static manifest file/dir
+      (--manifest) or live releases from a database (--db) or directory (--dir).
+      Requires PF_GATEWAY_API_KEY or PF_GATEWAY_TOKEN_SECRET for auth (or it
+      runs OPEN in dev mode).
+
 Serve live releases with the gateway (hot promote/rollback):
-  PF_RELEASES_DIR=releases npm run dev -w @protocolfoundry/gateway
+  pf serve --dir releases
 `;
 
 function parseFlags(argv: string[]): { positional: string[]; flags: Map<string, string> } {
@@ -130,6 +145,8 @@ async function main(): Promise<void> {
         ...(process.env.ANTHROPIC_API_KEY
           ? { extractor: createAnthropicDocsExtractor(flags.get("--model")) }
           : {}),
+        ...(flags.has("--max-pages") ? { maxPages: Number(flags.get("--max-pages")) } : {}),
+        ...(flags.has("--depth") ? { maxDepth: Number(flags.get("--depth")) } : {}),
         log: (message) => console.log(`[ingest] ${message}`),
       });
     } else {
@@ -442,8 +459,70 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "serve") {
+    const port = Number(flags.get("--port") ?? process.env.PF_PORT ?? 3001);
+    const manifestPath = flags.get("--manifest") ?? process.env.PF_MANIFEST_PATH;
+    const dbUrl = flags.get("--db") ?? process.env.PF_DATABASE_URL;
+    const releasesDir = flags.get("--dir") ?? process.env.PF_RELEASES_DIR;
+
+    const releaseMode = Boolean(releasesDir || dbUrl);
+    if (!manifestPath && !releaseMode) {
+      console.error("Provide --manifest <path> or --db <url> or --dir <releases-dir>");
+      process.exit(1);
+    }
+
+    const audit = createAuditStoreFromEnv({
+      ...process.env,
+      ...(dbUrl ? { PF_DATABASE_URL: dbUrl } : {}),
+    });
+    const vault = createVaultFromEnv();
+    if (vault) console.log("[gateway] credential vault enabled (PF_VAULT_KEY)");
+
+    const options = {
+      audit,
+      resolveCredential: createCredentialResolver(vault),
+      ...(process.env.PF_GATEWAY_API_KEY ? { apiKey: process.env.PF_GATEWAY_API_KEY } : {}),
+      ...(process.env.PF_GATEWAY_TOKEN_SECRET
+        ? { tokenSecret: process.env.PF_GATEWAY_TOKEN_SECRET }
+        : {}),
+      ...(process.env.PF_AUTH_SERVER_URL
+        ? { authorizationServers: [process.env.PF_AUTH_SERVER_URL] }
+        : {}),
+      approveAll: process.env.PF_APPROVE_ALL === "true",
+    };
+
+    const source = releaseMode
+      ? releaseManifestSource(
+          createReleaseStoreFromEnv({
+            ...process.env,
+            ...(dbUrl ? { PF_DATABASE_URL: dbUrl } : {}),
+            ...(releasesDir ? { PF_RELEASES_DIR: releasesDir } : {}),
+          }),
+        )
+      : staticManifestSource(await loadManifests(manifestPath!));
+
+    const app = createGatewayApp(source, options);
+    app.listen(port, async () => {
+      const names = await source.names();
+      const mode = releaseMode ? `live releases` : `static manifests from ${manifestPath}`;
+      console.log(`[gateway] listening on port ${port} (mode: ${mode})`);
+      for (const name of names) {
+        console.log(`[gateway] serving "${name}" at http://localhost:${port}/mcp/${name}`);
+      }
+      if (names.length === 0 && releaseMode) {
+        console.warn(
+          "[gateway] no live releases yet — promote one with: pf release promote <project> <version>",
+        );
+      }
+    });
+    return;
+  }
+
   console.error(USAGE);
   process.exit(command ? 1 : 0);
 }
 
-await main();
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

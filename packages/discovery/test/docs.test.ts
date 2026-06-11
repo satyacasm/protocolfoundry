@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   assertPublicHttpUrl,
   buildExtractionPrompt,
+  createAnthropicDocsExtractor,
+  findDocLinkCandidates,
   findSpecCandidates,
   graphFromExtraction,
   htmlToText,
@@ -251,10 +253,176 @@ describe("SSRF guard", () => {
   });
 });
 
+describe("findDocLinkCandidates", () => {
+  it("returns same-origin page links resolved absolute, hint-matched first", () => {
+    const html = `
+      <html><body>
+        <a href="orders.html">Orders API</a>
+        <a href="/docs/payments">Payments endpoints</a>
+        <a href="https://docs.example.com/shipping#auth">Shipping API reference</a>
+        <a href="https://other.example.com/api">External API</a>
+        <a href="/static/openapi.json">spec file</a>
+        <a href="/logo.png">logo</a>
+        <a href="mailto:dev@example.com">contact</a>
+        <a href="javascript:void(0)">toggle</a>
+        <a href="#section">anchor</a>
+      </body></html>`;
+    const links = findDocLinkCandidates(html, "https://docs.example.com/index.html");
+    expect(links).toContain("https://docs.example.com/orders.html");
+    expect(links).toContain("https://docs.example.com/docs/payments");
+    // fragment stripped
+    expect(links).toContain("https://docs.example.com/shipping");
+    // never leaves the docs site
+    expect(links.some((l) => l.includes("other.example.com"))).toBe(false);
+    // specs, assets, and non-http links are not page candidates
+    expect(links.some((l) => l.endsWith(".json"))).toBe(false);
+    expect(links.some((l) => l.endsWith(".png"))).toBe(false);
+    expect(links.some((l) => l.startsWith("mailto:") || l.startsWith("javascript:"))).toBe(false);
+  });
+
+  it("does not return the page itself or duplicates", () => {
+    const html = `
+      <a href="/index.html">home</a>
+      <a href="/orders">Orders API</a>
+      <a href="/orders#create">Create order</a>`;
+    const links = findDocLinkCandidates(html, "https://docs.example.com/index.html");
+    expect(links).not.toContain("https://docs.example.com/index.html");
+    expect(links.filter((l) => l === "https://docs.example.com/orders")).toHaveLength(1);
+  });
+});
+
+describe("ingestUrl multi-page crawl", () => {
+  const INDEX = `<html><body><h1>Developer API reference</h1>
+    <p>${"Welcome to our API documentation portal. ".repeat(10)}</p>
+    <a href="/docs/orders">Orders API</a>
+    <a href="/docs/payments">Payments API</a></body></html>`;
+  const ORDERS_PAGE = `<html><body><h2>GET /orders/{id}</h2>
+    <p>${"Returns a single order with full detail. ".repeat(10)}</p></body></html>`;
+  const PAYMENTS_PAGE = `<html><body><h2>POST /payments</h2>
+    <p>${"Creates a payment for an order. ".repeat(10)}</p></body></html>`;
+
+  it("follows same-site links from an index page and merges operations from all pages", async () => {
+    const extractor: DocsExtractor = {
+      model: "scripted-fake",
+      async extract(prompt) {
+        if (prompt.includes("Returns a single order")) {
+          return RawDocsExtraction.parse({
+            baseUrl: "https://api.example.com",
+            operations: [{ name: "Get order", method: "GET", path: "/orders/{id}", params: [] }],
+          });
+        }
+        if (prompt.includes("Creates a payment")) {
+          return RawDocsExtraction.parse({
+            operations: [{ name: "Create payment", method: "POST", path: "/payments", params: [] }],
+          });
+        }
+        return RawDocsExtraction.parse({ operations: [] });
+      },
+    };
+    const graph = await ingestUrl("https://docs.example.com/index", "proj", {
+      lookupFn: publicLookup,
+      fetchFn: fakeFetch({
+        "https://docs.example.com/index": { body: INDEX },
+        "https://docs.example.com/docs/orders": { body: ORDERS_PAGE },
+        "https://docs.example.com/docs/payments": { body: PAYMENTS_PAGE },
+      }),
+      extractor,
+    });
+    expect(graph.operations.map((op) => op.id).sort()).toEqual(["create_payment", "get_order"]);
+    // baseUrl found on one page applies to the merged graph
+    expect(graph.baseUrls["default"]).toBe("https://api.example.com");
+  });
+
+  it("discovers a machine-readable spec linked from a crawled child page (no LLM)", async () => {
+    const child = `<html><body><h2>API reference</h2>
+      <script>SwaggerUIBundle({ url: "/openapi.json" })</script></body></html>`;
+    const graph = await ingestUrl("https://docs.example.com/index", "proj", {
+      lookupFn: publicLookup,
+      fetchFn: fakeFetch({
+        "https://docs.example.com/index": INDEX_LINKING("/reference", "Full API reference"),
+        "https://docs.example.com/reference": { body: child },
+        "https://docs.example.com/openapi.json": { body: OPENAPI_SPEC },
+      }),
+    });
+    expect(graph.operations.map((op) => op.id)).toEqual(["listOrders"]);
+  });
+
+  it("respects the maxPages budget", async () => {
+    const fetched: string[] = [];
+    const spyFetch: typeof fetch = (async (input: RequestInfo | URL) => {
+      fetched.push(String(input));
+      const routes: Record<string, string> = {
+        "https://docs.example.com/index": INDEX,
+        "https://docs.example.com/docs/orders": ORDERS_PAGE,
+        "https://docs.example.com/docs/payments": PAYMENTS_PAGE,
+      };
+      return new Response(routes[String(input)] ?? "not found", {
+        status: routes[String(input)] ? 200 : 404,
+      });
+    }) as typeof fetch;
+    const extractor: DocsExtractor = {
+      model: "scripted-fake",
+      async extract() {
+        return RawDocsExtraction.parse({
+          operations: [{ name: "Get order", method: "GET", path: "/orders/{id}", params: [] }],
+        });
+      },
+    };
+    await ingestUrl("https://docs.example.com/index", "proj", {
+      lookupFn: publicLookup,
+      fetchFn: spyFetch,
+      extractor,
+      maxPages: 2,
+    });
+    // entry page + at most 1 crawled page
+    expect(fetched.filter((u) => !u.endsWith(".json"))).toHaveLength(2);
+  });
+
+  it("never crawls off-origin links", async () => {
+    const fetched: string[] = [];
+    const index = `<html><body><h1>API docs</h1>
+      <p>${"Read about our API endpoints here. ".repeat(10)}</p>
+      <a href="https://evil.example.net/api">Partner API reference</a></body></html>`;
+    const spyFetch: typeof fetch = (async (input: RequestInfo | URL) => {
+      fetched.push(String(input));
+      return new Response(index);
+    }) as typeof fetch;
+    const extractor: DocsExtractor = {
+      model: "scripted-fake",
+      async extract() {
+        return RawDocsExtraction.parse({
+          operations: [{ name: "List things", method: "GET", path: "/things", params: [] }],
+        });
+      },
+    };
+    await ingestUrl("https://docs.example.com/index", "proj", {
+      lookupFn: publicLookup,
+      fetchFn: spyFetch,
+      extractor,
+    });
+    expect(fetched).toEqual(["https://docs.example.com/index"]);
+  });
+});
+
+function INDEX_LINKING(href: string, text: string): { body: string } {
+  return {
+    body: `<html><body><h1>Developer documentation</h1>
+      <p>${"Start integrating with our platform today. ".repeat(10)}</p>
+      <a href="${href}">${text}</a></body></html>`,
+  };
+}
+
 describe("buildExtractionPrompt", () => {
   it("includes the page url and the doc text", () => {
     const prompt = buildExtractionPrompt("GET /things returns things", "https://d.example.com");
     expect(prompt).toContain("https://d.example.com");
     expect(prompt).toContain("GET /things");
+  });
+});
+
+describe("createAnthropicDocsExtractor", () => {
+  it("resolves friendly model aliases like the other LLM boundaries", () => {
+    expect(createAnthropicDocsExtractor("haiku").model).toBe("claude-haiku-4-5");
+    expect(createAnthropicDocsExtractor("claude-sonnet-4-6").model).toBe("claude-sonnet-4-6");
   });
 });

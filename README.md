@@ -40,24 +40,20 @@ docs/        all project documentation
 npm install        # install workspace dependencies
 npm run build      # build all workspaces (dependency order)
 npm test           # build + run all tests (unit + gateway e2e)
+npm run dist       # package CLI and Gateway into a single native binary (dist/customer-release/)
 ```
 
 Requires Node >= 22.
 
-## Try the Phase 1 pipeline
+## Try the Phase 1 pipeline (Local Binary)
+
+If you've run \`npm run dist\`, you can use the bundled binary:
 
 ```bash
-# 1. Spec -> workflow graph
-npm run dev -w @protocolfoundry/cli -- ingest examples/taskboard/openapi.json --project taskboard -o graph.json
-
-# 2. Graph -> MCP server manifest (select all, or --select op1,op2 for curation)
-npm run dev -w @protocolfoundry/cli -- generate graph.json --name taskboard -o manifest.json
-
-# 3. Host it (agents authenticate with PF_GATEWAY_API_KEY; upstream credential
-#    comes from the env var named in the manifest's credentialBindings)
-PF_MANIFEST_PATH=manifest.json PF_GATEWAY_API_KEY=secret PF_CRED_APIKEYAUTH=<upstream-key> \
-  npm run dev -w @protocolfoundry/gateway
-# -> Streamable HTTP MCP endpoint at http://localhost:3001/mcp/taskboard
+cd dist/customer-release/
+./pf ingest examples/taskboard/openapi.json --project taskboard -o graph.json
+./pf generate graph.json --name taskboard -o manifest.json
+./pf serve --manifest manifest.json
 ```
 
 ## Status

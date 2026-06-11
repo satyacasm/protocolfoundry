@@ -6,6 +6,7 @@ import {
   ExposureWarning,
   ToolRefinement,
   resolveClaudeModel,
+  supportsAdaptiveThinking,
   type WorkflowGraph,
 } from "@protocolfoundry/core";
 
@@ -171,7 +172,7 @@ export function createAnthropicCurator(modelOrAlias?: string): Curator {
       const response = await client.messages.create({
         model,
         max_tokens: 16000,
-        thinking: { type: "adaptive" },
+        ...(supportsAdaptiveThinking(model) ? { thinking: { type: "adaptive" as const } } : {}),
         system: [
           {
             type: "text",

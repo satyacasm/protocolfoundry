@@ -231,7 +231,25 @@ export function ingestOpenApi(
   const knownAuthIds = new Set(authRequirements.map((a) => a.id));
 
   const serverUrl = spec.servers?.[0]?.url;
-  const baseUrls: Record<string, string> = serverUrl ? { default: serverUrl } : {};
+  let resolvedBaseUrl = serverUrl;
+  if (serverUrl && !serverUrl.includes("://") && sourceId.startsWith("url:")) {
+    try {
+      const base = new URL(sourceId.slice(4));
+      resolvedBaseUrl = new URL(serverUrl, base).toString();
+    } catch {
+      /* fallback to raw value if sourceId isn't a valid URL */
+    }
+  }
+
+  // If NO server was specified at all, and we have a source URL, use the source URL's origin
+  if (!resolvedBaseUrl && sourceId.startsWith("url:")) {
+    try {
+      const base = new URL(sourceId.slice(4));
+      resolvedBaseUrl = base.origin;
+    } catch {}
+  }
+
+  const baseUrls: Record<string, string> = resolvedBaseUrl ? { default: resolvedBaseUrl } : {};
 
   const operations: Operation[] = [];
   const usedIds = new Set<string>();

@@ -7,6 +7,71 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 18: customer bundle verified, multi-page docs crawl, upstream-error clarity
+
+### Done
+
+- **Verified the customer bundle end-to-end** (`npm run dist` →
+  `dist/customer-release/pf.exe` + README): ingest → generate → `pf serve` →
+  MCP initialize/tools/list/tools/call over Streamable HTTP, including a
+  fully live run against `https://api.apis.guru/v2/openapi.yaml` (real JSON
+  back through `tools/call`) and against the NWS docs page
+  (`weather.gov/documentation/services-web-api` → spec autodiscovered →
+  live alert data through the gateway). The relative-server-URL fix in
+  `openapi.ts` confirmed working (Petstore `/api/v3` resolves against the
+  source URL).
+- **Multi-page docs crawl** (ADR-0010 amended): `ingestUrl` now follows
+  same-origin links from a docs index page breadth-first (default 12 pages
+  / 2 hops, `--max-pages`/`--depth` CLI flags), runs spec autodiscovery on
+  every crawled page (first working spec wins), and merges per-page LLM
+  extractions (only pages showing `METHOD /path` signatures are extracted)
+  into one WorkflowGraph. SSRF guard on every hop; cross-origin links never
+  followed. Verified live against Flipkart Seller docs: crawled 11 pages
+  (listing/order API refs) and correctly handed off to LLM extraction.
+  5 new tests (`findDocLinkCandidates`, crawl merge, child-page spec
+  discovery, page budget, origin confinement).
+- **Upstream failure clarity**: `executePlan` now unwraps undici's cause
+  chain — tool errors read `Upstream GET <url> unreachable: connect
+  ECONNREFUSED …` instead of bare `fetch failed` (what an agent in
+  Claude/Gemini actually sees when a credential/base-URL is wrong). New
+  executor test.
+- **bundle.mjs**: aborts with an actionable message when `pf.exe` is locked
+  by a still-running serve (was: silent catch, then cryptic pkg EPERM).
+
+### Live LLM extraction validated (same day, with API key)
+
+- **Flipkart Seller docs end-to-end with haiku**: `pf ingest
+  https://seller.flipkart.com/api-docs/FMSAPI.html --model haiku
+  --max-pages 3 --depth 1` crawled 3 pages and extracted **41 operations**
+  (listings, shipments, returns, OAuth endpoints) with the correct base URL
+  (`https://api.flipkart.net`) and oauth2 auth detail. Generated a 3-tool
+  manifest, served it, MCP tools/list + tools/call worked — the call reached
+  Flipkart's real gateway (its own 404 came back for the docs-stated path;
+  exact route verification is what curation review is for).
+- Four LLM-boundary fixes shaken out by the live run:
+  1. `createAnthropicDocsExtractor` now resolves model aliases via
+     `resolveClaudeModel` (was sending the literal string "haiku").
+  2. Extraction request now **streams** (`messages.stream().finalMessage()`)
+     — non-streaming 32K-token requests are rejected by the SDK.
+  3. Structured-output schema: `auth.detail` open map → pinned `{name, in}`
+     (API forbids `additionalProperties` other than `false`).
+  4. New `supportsAdaptiveThinking()` in core — haiku models 400 on
+     `thinking: adaptive`; gate applied in discovery extractor, curation
+     curator, and evals agent (the latter two had the same latent bug).
+- 87 tests green (core models test added).
+
+### Open questions
+
+- Petstore demo upstream was returning 500s for all callers; if used in
+  demos, prefer apis.guru or api.weather.gov.
+
+### Next steps
+
+- Eval-gate a crawled-docs server once extraction can run with a key.
+- Consider surfacing crawl progress in the Forge UI (currently CLI log only).
+
+---
+
 ## 2026-06-11 — Session 17: docs-page ingestion (ADR-0010)
 
 ### Done

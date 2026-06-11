@@ -1,6 +1,6 @@
 # ADR-0010: Docs-page ingestion — spec autodiscovery, then reviewed LLM extraction
 
-- **Status:** accepted
+- **Status:** accepted (amended 2026-06-11: bounded same-origin crawl)
 - **Date:** 2026-06-11
 
 ## Context
@@ -34,14 +34,30 @@ shared by `pf ingest <url>` and the Forge's URL field:
    try each (max 8). The first one that parses into a non-empty graph wins.
    Deterministic, lossless, zero LLM cost; expected to cover most real doc
    sites.
-3. **LLM extraction** (fallback): strip the page to text and ask a
+2b. **Bounded same-origin crawl** (amendment): real docs portals are
+   multi-page — an index page links to per-topic pages which hold the
+   actual endpoint documentation (e.g. Sphinx-generated portals like
+   Flipkart Seller's). When the entry page is HTML and names no working
+   spec, `findDocLinkCandidates` collects same-origin page links
+   (assets/spec files excluded, API-ish hrefs/anchor text ranked first)
+   and a breadth-first crawl follows them — default budget 12 pages
+   total, 2 hops (`--max-pages` / `--depth` on the CLI). Every crawled
+   page gets the same spec-autodiscovery treatment (first working spec
+   short-circuits the crawl); the SSRF guard applies to every fetch.
+   Cross-origin links are never followed.
+
+3. **LLM extraction** (fallback): strip the page(s) to text and ask a
    `DocsExtractor` — an interface mirroring curation's `Curator` (scripted
    fakes in tests, no API key; real impl `createAnthropicDocsExtractor`,
    `claude-opus-4-8`, adaptive thinking, structured outputs) — for the
    documented endpoints (method, path template, params with locations, base
    URL, auth scheme). The zod-validated result is assembled into a normal
    `WorkflowGraph` (deduped per method+path, path placeholders forced into
-   required inputs, effects inferred from method).
+   required inputs, effects inferred from method). With a crawl, the entry
+   page plus every crawled page whose text actually shows endpoint
+   signatures (`METHOD /path`) is extracted — one LLM call per such page —
+   and the extractions merge into one graph (first stated base URL / auth
+   scheme wins, operations dedupe per method+path).
 
 Extracted graphs flow into the SAME curation pipeline as every other source:
 a human reviews every operation before a manifest exists (ADR-0004), so

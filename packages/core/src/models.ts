@@ -25,3 +25,12 @@ export function resolveClaudeModel(model?: string): string {
   if (!model) return DEFAULT_CLAUDE_MODEL;
   return isClaudeModelAlias(model) ? CLAUDE_MODELS[model] : model;
 }
+
+/**
+ * Whether `thinking: {type: "adaptive"}` is accepted by a model. Haiku models
+ * reject it with a 400 ("adaptive thinking is not supported on this model") —
+ * requests for those must omit the thinking parameter entirely.
+ */
+export function supportsAdaptiveThinking(model: string): boolean {
+  return !/haiku/i.test(model);
+}

@@ -153,6 +153,30 @@ async function buildRequest(
 }
 
 /**
+ * undici buries the actual network failure (ECONNREFUSED, ENOTFOUND, cert
+ * errors) in a cause chain under a generic "fetch failed" TypeError; walk
+ * it so the tool error tells the agent what actually went wrong.
+ */
+function describeFetchFailure(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const parts: string[] = [];
+  let current: unknown = error;
+  while (current instanceof Error) {
+    if (current instanceof AggregateError && current.errors.length > 0) {
+      parts.push(
+        current.errors
+          .map((e) => (e instanceof Error ? e.message : String(e)))
+          .join("; "),
+      );
+      break;
+    }
+    if (current.message && current.message !== "fetch failed") parts.push(current.message);
+    current = current.cause;
+  }
+  return parts.length > 0 ? parts.join(" — ") : error.message;
+}
+
+/**
  * Execute a tool's plan: sequential upstream calls with binding resolution.
  * The output of the final step is the tool result.
  */
@@ -184,7 +208,12 @@ export async function executePlan(
 
     const { url, init } = await buildRequest(manifest, op, boundArgs, resolveCredential);
     const startedAt = Date.now();
-    const response = await fetch(url, init);
+    let response: Response;
+    try {
+      response = await fetch(url, init);
+    } catch (error) {
+      throw new Error(`Upstream ${op.method} ${url} unreachable: ${describeFetchFailure(error)}`);
+    }
     const text = await response.text();
     upstreamCalls.push({
       operationId: call.operationId,

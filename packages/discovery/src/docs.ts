@@ -2,7 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { z } from "zod";
-import { AuthRequirement, Operation, WorkflowGraph } from "@protocolfoundry/core";
+import {
+  AuthRequirement,
+  Operation,
+  WorkflowGraph,
+  resolveClaudeModel,
+  supportsAdaptiveThinking,
+} from "@protocolfoundry/core";
 import { ingestSource } from "./source.js";
 
 /**
@@ -193,6 +199,52 @@ export function findSpecCandidates(html: string, pageUrl: string): string[] {
 }
 
 /* ------------------------------------------------------------------ */
+/* stage 1b: doc-page link discovery (multi-page crawl)                */
+/* ------------------------------------------------------------------ */
+
+const ASSET_EXTENSION = /\.(png|jpe?g|gif|svg|ico|css|js|mjs|map|zip|tar|gz|pdf|woff2?|ttf|eot|mp4|webm|xml|txt)(\?|$)/i;
+const SPEC_EXTENSION = /\.(json|ya?ml)(\?|$)/i;
+const DOC_LINK_HINT = /api|endpoint|reference|resource|operation|method|rest|integration|webhook|sdk|v\d+|docs?|guide/i;
+
+/**
+ * Same-origin links from a docs page that may themselves be documentation
+ * pages worth crawling (an index page linking out to per-endpoint pages).
+ * Hint-matched links (API-ish href or anchor text) come first so a small
+ * page budget is spent on the most promising candidates. Spec-looking
+ * files are excluded — those are findSpecCandidates' job.
+ */
+export function findDocLinkCandidates(html: string, pageUrl: string): string[] {
+  const base = new URL(pageUrl);
+  const self = `${base.origin}${base.pathname}`;
+  const hinted: string[] = [];
+  const rest: string[] = [];
+  const seen = new Set<string>();
+
+  for (const m of html.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    const href = m[1]!.trim().replace(/&amp;/g, "&");
+    const text = (m[2] ?? "").replace(/<[^>]+>/g, " ").trim();
+    if (!href || href.startsWith("#")) continue;
+    if (/^(mailto|javascript|tel|data):/i.test(href)) continue;
+    let resolved: URL;
+    try {
+      resolved = new URL(href, pageUrl);
+    } catch {
+      continue;
+    }
+    if (resolved.protocol !== "http:" && resolved.protocol !== "https:") continue;
+    if (resolved.origin !== base.origin) continue;
+    if (ASSET_EXTENSION.test(resolved.pathname)) continue;
+    if (SPEC_EXTENSION.test(resolved.pathname)) continue;
+    const normalized = `${resolved.origin}${resolved.pathname}${resolved.search}`;
+    if (normalized === self || seen.has(normalized)) continue;
+    seen.add(normalized);
+    if (DOC_LINK_HINT.test(`${href} ${text}`)) hinted.push(normalized);
+    else rest.push(normalized);
+  }
+  return [...hinted, ...rest].slice(0, 40);
+}
+
+/* ------------------------------------------------------------------ */
 /* stage 2: LLM extraction                                             */
 /* ------------------------------------------------------------------ */
 
@@ -239,7 +291,17 @@ const RAW_EXTRACTION_JSON_SCHEMA = {
       required: ["kind"],
       properties: {
         kind: { type: "string", enum: ["apiKey", "oauth2", "basic", "bearer", "none"] },
-        detail: { type: "object", additionalProperties: { type: "string" } },
+        // structured outputs forbid open maps (additionalProperties must be
+        // false), so detail is pinned to the keys the gateway's auth
+        // application actually reads: header/query param name + location.
+        detail: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            name: { type: "string" },
+            in: { type: "string", enum: ["header", "query"] },
+          },
+        },
       },
     },
     operations: {
@@ -318,7 +380,7 @@ Extract every concrete REST endpoint the documentation describes:
 
 - "operations": one entry per endpoint with method, path template (use {param} placeholders exactly as the path expects), a short human name, a one-or-two sentence description of what it does, and its parameters with location (path/query/header/body), type, and whether required. Body fields are individual params with location "body".
 - "baseUrl": the API base URL if the docs state one (e.g. https://api.example.com/v2). This is the API host, never the documentation site's own URL.
-- "auth": how the API authenticates (apiKey/bearer/oauth2/basic) with useful detail (e.g. header name).
+- "auth": how the API authenticates (apiKey/bearer/oauth2/basic); in "detail" give the credential's parameter "name" (e.g. the header name) and "in" (header or query) when the docs state them.
 
 Rules:
 - Only endpoints explicitly documented on the page — do not invent or generalize.
@@ -327,21 +389,30 @@ Rules:
 - If the page documents nothing concrete, return an empty operations list.`;
 }
 
-/** Real Claude-backed extractor. Requires ANTHROPIC_API_KEY in the environment. */
-export function createAnthropicDocsExtractor(model = "claude-opus-4-8"): DocsExtractor {
+/**
+ * Real Claude-backed extractor. Requires ANTHROPIC_API_KEY in the environment.
+ * Accepts a friendly alias ("haiku" | "sonnet" | "opus" | "fable") or a full
+ * model ID; defaults to opus (extraction quality bounds everything downstream).
+ */
+export function createAnthropicDocsExtractor(modelOrAlias?: string): DocsExtractor {
+  const model = modelOrAlias ? resolveClaudeModel(modelOrAlias) : "claude-opus-4-8";
   const client = new Anthropic();
   return {
     model,
     async extract(prompt: string): Promise<RawDocsExtraction> {
-      const response = await client.messages.create({
-        model,
-        max_tokens: 32000,
-        thinking: { type: "adaptive" },
-        messages: [{ role: "user", content: prompt }],
-        output_config: {
-          format: { type: "json_schema", schema: RAW_EXTRACTION_JSON_SCHEMA },
-        },
-      });
+      // Streamed: doc pages are large and extraction can exceed the SDK's
+      // non-streaming time limit at this max_tokens.
+      const response = await client.messages
+        .stream({
+          model,
+          max_tokens: 32000,
+          ...(supportsAdaptiveThinking(model) ? { thinking: { type: "adaptive" as const } } : {}),
+          messages: [{ role: "user", content: prompt }],
+          output_config: {
+            format: { type: "json_schema", schema: RAW_EXTRACTION_JSON_SCHEMA },
+          },
+        })
+        .finalMessage();
       const text = response.content
         .filter((b): b is Anthropic.TextBlock => b.type === "text")
         .map((b) => b.text)
@@ -469,6 +540,10 @@ export interface IngestUrlOptions {
   lookupFn?: LookupFn;
   /** Needed only when the page has no discoverable machine-readable spec. */
   extractor?: DocsExtractor;
+  /** Total page-fetch budget for the docs crawl, entry page included. */
+  maxPages?: number;
+  /** How many link hops from the entry page to follow (0 = entry only). */
+  maxDepth?: number;
   log?: (message: string) => void;
 }
 
@@ -490,6 +565,8 @@ export async function ingestUrl(
   const fetchFn = options.fetchFn ?? fetch;
   const lookupFn = options.lookupFn ?? defaultLookup;
   const log = options.log ?? (() => {});
+  const maxPages = Math.max(1, options.maxPages ?? 12);
+  const maxDepth = Math.max(0, options.maxDepth ?? 2);
   const sourceId = `url:${url}`;
 
   const response = await safeFetch(url, fetchFn, lookupFn);
@@ -502,26 +579,70 @@ export async function ingestUrl(
 
   log(`HTML documentation page detected at ${url}`);
 
-  // stage 1: a linked machine-readable spec beats scraping every time
-  for (const candidate of findSpecCandidates(raw, url)) {
-    try {
-      // safeFetch re-validates: page content names the candidates, so they
-      // are attacker-controllable even when the page URL itself is fine.
-      const specResponse = await safeFetch(candidate, fetchFn, lookupFn);
-      if (!specResponse.ok) continue;
-      const specRaw = await specResponse.text();
-      if (looksLikeHtml(specRaw)) continue;
-      const graph = ingestSource(specRaw, projectId, `url:${candidate}`);
-      if (graph.operations.length > 0) {
-        log(`Found machine-readable spec: ${candidate}`);
-        return graph;
+  /**
+   * Try every machine-readable spec candidate a page references; the first
+   * one that parses into operations wins (deterministic, lossless, no LLM).
+   */
+  const trySpecCandidates = async (html: string, pageUrl: string): Promise<WorkflowGraph | undefined> => {
+    for (const candidate of findSpecCandidates(html, pageUrl)) {
+      try {
+        // safeFetch re-validates: page content names the candidates, so they
+        // are attacker-controllable even when the page URL itself is fine.
+        const specResponse = await safeFetch(candidate, fetchFn, lookupFn);
+        if (!specResponse.ok) continue;
+        const specRaw = await specResponse.text();
+        if (looksLikeHtml(specRaw)) continue;
+        const graph = ingestSource(specRaw, projectId, `url:${candidate}`);
+        if (graph.operations.length > 0) {
+          log(`Found machine-readable spec: ${candidate}`);
+          return graph;
+        }
+      } catch {
+        /* candidate didn't parse as a spec — try the next one */
       }
-    } catch {
-      /* candidate didn't parse as a spec — try the next one */
     }
+    return undefined;
+  };
+
+  // stage 1: a linked machine-readable spec beats scraping every time
+  const entrySpec = await trySpecCandidates(raw, url);
+  if (entrySpec) return entrySpec;
+
+  // stage 1b: breadth-first crawl of same-origin doc links (an index page
+  // linking out to per-endpoint pages). Every crawled page gets the same
+  // spec-autodiscovery treatment; pages are kept for LLM extraction.
+  const pages: Array<{ url: string; html: string }> = [{ url, html: raw }];
+  const visited = new Set<string>([url]);
+  let frontier: Array<{ url: string; html: string }> = [{ url, html: raw }];
+
+  for (let depth = 0; depth < maxDepth && pages.length < maxPages && frontier.length > 0; depth++) {
+    const next: Array<{ url: string; html: string }> = [];
+    for (const page of frontier) {
+      for (const link of findDocLinkCandidates(page.html, page.url)) {
+        if (pages.length >= maxPages) break;
+        if (visited.has(link)) continue;
+        visited.add(link);
+        let html: string;
+        try {
+          const linkResponse = await safeFetch(link, fetchFn, lookupFn);
+          if (!linkResponse.ok) continue;
+          html = await linkResponse.text();
+        } catch {
+          continue; // unreachable or blocked (SSRF guard) — skip
+        }
+        if (!looksLikeHtml(html)) continue;
+        log(`Crawled docs page: ${link}`);
+        const spec = await trySpecCandidates(html, link);
+        if (spec) return spec;
+        pages.push({ url: link, html });
+        next.push({ url: link, html });
+      }
+      if (pages.length >= maxPages) break;
+    }
+    frontier = next;
   }
 
-  // stage 2: LLM extraction from the page text
+  // stage 2: LLM extraction from the page text(s)
   if (!options.extractor) {
     throw new Error(
       `${url} is an HTML docs page with no discoverable OpenAPI/Postman spec. ` +
@@ -529,15 +650,37 @@ export async function ingestUrl(
     );
   }
   log(`No spec link found — extracting endpoints with ${options.extractor.model}`);
-  const text = htmlToText(raw);
-  if (text.length < 200) {
+
+  // The entry page is always extracted; crawled pages only when their text
+  // actually describes endpoints (keeps the LLM spend proportional).
+  const endpointSignal = /\b(GET|POST|PUT|PATCH|DELETE|HEAD)\s+\/\S/;
+  const texts = pages
+    .map((page) => ({ url: page.url, text: htmlToText(page.html) }))
+    .filter((page, index) => index === 0 || (page.text.length >= 200 && endpointSignal.test(page.text)));
+
+  if (texts.every((page) => page.text.length < 200)) {
     throw new Error(
       `${url} has almost no readable text (likely a fully client-rendered docs app). ` +
         "Point at the underlying spec URL instead.",
     );
   }
-  const extraction = await options.extractor.extract(buildExtractionPrompt(text, url));
-  const graph = graphFromExtraction(extraction, projectId, sourceId);
+
+  const extractions: RawDocsExtraction[] = [];
+  for (const page of texts) {
+    if (page.text.length < 200) continue;
+    if (texts.length > 1) log(`Extracting endpoints from ${page.url}`);
+    extractions.push(await options.extractor.extract(buildExtractionPrompt(page.text, page.url)));
+  }
+
+  // merge: operations concatenate (graphFromExtraction dedupes method+path);
+  // the first page to state a base URL / auth scheme wins.
+  const merged: RawDocsExtraction = {
+    baseUrl: extractions.find((e) => e.baseUrl)?.baseUrl,
+    auth: extractions.find((e) => e.auth && e.auth.kind !== "none")?.auth,
+    operations: extractions.flatMap((e) => e.operations),
+  };
+
+  const graph = graphFromExtraction(merged, projectId, sourceId);
   if (graph.operations.length === 0) {
     throw new Error(`No API operations could be extracted from ${url}`);
   }

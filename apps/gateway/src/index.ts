@@ -64,7 +64,7 @@ export async function loadManifests(path: string): Promise<McpServerManifest[]> 
 const isMain = process.argv[1]?.replace(/\\/g, "/").endsWith("gateway/src/index.ts")
   || process.argv[1]?.replace(/\\/g, "/").endsWith("gateway/dist/index.js");
 
-if (isMain) {
+async function runGateway(): Promise<void> {
   const manifestPath = process.env.PF_MANIFEST_PATH;
   const releaseMode = Boolean(process.env.PF_RELEASES_DIR || process.env.PF_DATABASE_URL);
   if (!manifestPath && !releaseMode) {
@@ -104,7 +104,16 @@ if (isMain) {
       console.log(`[gateway] serving "${name}" at http://localhost:${port}/mcp/${name}`);
     }
     if (names.length === 0) {
-      console.warn("[gateway] no live releases yet — promote one with: pf release promote <project> <version>");
+      console.warn(
+        "[gateway] no live releases yet — promote one with: pf release promote <project> <version>",
+      );
     }
+  });
+}
+
+if (isMain) {
+  runGateway().catch((error) => {
+    console.error(error);
+    process.exit(1);
   });
 }
