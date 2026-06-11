@@ -10,3 +10,7 @@ audit.log.jsonl
 !.env.example
 .DS_Store
 coverage/
+
+# local design-preview artifacts
+.playwright-mcp/
+theme-*.png

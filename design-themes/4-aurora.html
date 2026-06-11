@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Theme 4 — Aurora (soft gradient glass)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Onest:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #16242b;
+    --ink-2: #5b6f78;
+    --teal: #0e7d6f;
+    --peach: #ff8a5c;
+    --glass: rgba(255, 255, 255, 0.58);
+    --glass-line: rgba(255, 255, 255, 0.85);
+    --shadow: 0 24px 60px -24px rgba(22, 60, 70, 0.25);
+    --r: 24px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    color: var(--ink);
+    font-family: "Onest", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    background: #e9f2f0;
+    overflow-x: hidden;
+  }
+  .display { font-family: "Bricolage Grotesque", sans-serif; }
+  .mono { font-family: "Spline Sans Mono", monospace; }
+  a { color: inherit; text-decoration: none; }
+
+  /* aurora mesh — generated stand-in for a soft nature/sky stock photo */
+  .mesh { position: fixed; inset: 0; z-index: 0; pointer-events: none; filter: saturate(1.05); }
+  .mesh i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .65; }
+  .mesh .m1 { width: 760px; height: 560px; left: -160px; top: -180px; background: #aee3d6; }
+  .mesh .m2 { width: 680px; height: 520px; right: -140px; top: -120px; background: #ffd9c2; }
+  .mesh .m3 { width: 560px; height: 460px; left: 32%; top: 240px; background: #cfe6f7; opacity: .8; }
+  .mesh .m4 { width: 700px; height: 500px; right: 8%; bottom: -260px; background: #d9efc9; }
+
+  .wrap { position: relative; z-index: 2; max-width: 1280px; margin: 0 auto; padding: 0 40px; }
+
+  nav {
+    margin-top: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--glass); border: 1px solid var(--glass-line);
+    backdrop-filter: blur(22px);
+    border-radius: 99px; padding: 12px 14px 12px 26px;
+    box-shadow: var(--shadow);
+  }
+  nav .wordmark { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; }
+  nav .wordmark i { font-style: normal; color: var(--teal); }
+  nav .links { display: flex; gap: 30px; font-size: 13.5px; font-weight: 500; color: var(--ink-2); }
+  nav .links .on { color: var(--ink); }
+  nav .cta { background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; padding: 11px 22px; border-radius: 99px; }
+
+  .hero { text-align: center; padding: 88px 0 54px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(14px);
+    border-radius: 99px; padding: 8px 18px; font-size: 12.5px; font-weight: 600; color: var(--teal);
+  }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 4px rgba(14,125,111,.15); }
+  .hero h1 {
+    font-size: clamp(52px, 6.6vw, 92px); font-weight: 800; line-height: 1.02; letter-spacing: -0.035em;
+    margin: 26px auto 0; max-width: 17ch;
+  }
+  .hero h1 em { font-style: normal; background: linear-gradient(95deg, var(--teal), #2ea58b 55%, var(--peach)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { margin: 24px auto 0; max-width: 58ch; font-size: 18.5px; line-height: 1.6; color: var(--ink-2); }
+  .hero .actions { margin-top: 34px; display: inline-flex; gap: 12px; }
+  .b1 { background: var(--teal); color: #fff; font-weight: 600; font-size: 15px; padding: 14px 30px; border-radius: 99px; box-shadow: 0 16px 30px -12px rgba(14,125,111,.45); }
+  .b2 { background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(14px); font-weight: 600; font-size: 15px; padding: 14px 26px; border-radius: 99px; }
+
+  /* floating glass dashboard */
+  .float { display: grid; grid-template-columns: 1.05fr .95fr; gap: 22px; align-items: stretch; padding-bottom: 40px; }
+  .glass {
+    background: var(--glass); border: 1px solid var(--glass-line);
+    backdrop-filter: blur(24px) saturate(1.3);
+    border-radius: var(--r); box-shadow: var(--shadow);
+  }
+  .servers { padding: 26px 28px; }
+  .servers .h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  .servers .h .t { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 21px; letter-spacing: -0.02em; }
+  .servers .h .mono { font-size: 11px; color: var(--ink-2); }
+  .srow {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: center;
+    background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.9);
+    border-radius: 16px; padding: 15px 18px; margin-bottom: 10px;
+  }
+  .srow .n { font-weight: 600; font-size: 15px; }
+  .srow .n small { display: block; font-weight: 400; font-size: 12px; color: var(--ink-2); margin-top: 3px; }
+  .ring { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    background: conic-gradient(var(--teal) calc(var(--p) * 1%), rgba(22,36,43,.08) 0); }
+  .ring i { font-style: normal; width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .pill { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 5px 11px; border-radius: 99px; }
+  .pill.live { color: #0e7d6f; background: rgba(14,125,111,.12); }
+  .pill.staged { color: #b3582a; background: rgba(255,138,92,.18); }
+
+  .right { display: flex; flex-direction: column; gap: 22px; }
+  .stat3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .kpi { padding: 20px 22px; text-align: left; }
+  .kpi .n { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 34px; letter-spacing: -0.03em; }
+  .kpi .n small { font-size: 15px; color: var(--teal); }
+  .kpi .d { font-size: 12px; color: var(--ink-2); margin-top: 4px; line-height: 1.45; }
+  .feed { padding: 22px 26px; flex: 1; }
+  .feed .t { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 17px; margin-bottom: 14px; }
+  .ev { display: flex; gap: 12px; align-items: baseline; padding: 9px 0; border-top: 1px dashed rgba(22,36,43,.14); font-size: 13.5px; }
+  .ev .mono { font-size: 10.5px; color: var(--ink-2); white-space: nowrap; }
+  .ev b { font-weight: 600; }
+  .ev .ok { color: var(--teal); }
+
+  /* pipeline pills */
+  .journey { padding: 30px 0 90px; }
+  .journey .t { text-align: center; font-family: "Bricolage Grotesque"; font-weight: 800; font-size: clamp(28px, 3.4vw, 44px); letter-spacing: -0.03em; margin-bottom: 34px; }
+  .journey .t em { font-style: normal; color: var(--teal); }
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .stepg { padding: 26px 26px 30px; position: relative; }
+  .stepg .badge { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 17px; background: linear-gradient(135deg, rgba(14,125,111,.16), rgba(255,138,92,.16)); }
+  .stepg h4 { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 19px; margin: 16px 0 8px; letter-spacing: -0.01em; }
+  .stepg p { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+  .stepg::after { content: "→"; position: absolute; right: -16px; top: 50%; color: var(--ink-2); }
+  .stepg:last-child::after { content: ""; }
+
+  footer { padding: 0 0 36px; display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+  <div class="mesh"><i class="m1"></i><i class="m2"></i><i class="m3"></i><i class="m4"></i></div>
+
+  <div class="wrap">
+    <nav>
+      <span class="wordmark">Protocol<i>Foundry</i></span>
+      <div class="links"><span class="on">Overview</span><span>Forge</span><span>Releases</span><span>Evals</span><span>Audit</span></div>
+      <span class="cta">Open console</span>
+    </nav>
+
+    <section class="hero">
+      <span class="chip">Gateway healthy · 3 servers live</span>
+      <h1 class="display">Calm infrastructure for <em>agent‑ready</em> APIs.</h1>
+      <p>ProtocolFoundry turns the apps you own into hosted MCP servers — tools curated by reviewed AI, releases gated by real agent evals, every call audited and every credential sealed in the vault.</p>
+      <div class="actions"><span class="b1">Forge a server</span><span class="b2">See how the gate works</span></div>
+    </section>
+
+    <section class="float">
+      <div class="glass servers">
+        <div class="h"><span class="t">Your servers</span><span class="mono">us‑west · 06:11 UTC</span></div>
+        <div class="srow"><span class="n">shiprocket<small>v4 · 12 tools · from Postman</small></span><span class="pill live">LIVE</span><span class="ring" style="--p:92"><i>92</i></span></div>
+        <div class="srow"><span class="n">petstore<small>v2 · 8 tools · from OpenAPI</small></span><span class="pill live">LIVE</span><span class="ring" style="--p:100"><i>100</i></span></div>
+        <div class="srow"><span class="n">billing‑api<small>v1 · 14 tools · eval in progress</small></span><span class="pill staged">STAGED</span><span class="ring" style="--p:71;--teal:#ff8a5c"><i>71</i></span></div>
+      </div>
+
+      <div class="right">
+        <div class="stat3">
+          <div class="glass kpi"><div class="n">9<small>/9</small></div><div class="d">eval tasks green on the last gate</div></div>
+          <div class="glass kpi"><div class="n">1.2k</div><div class="d">audited tool calls in 24 h</div></div>
+          <div class="glass kpi"><div class="n">0</div><div class="d">secrets in prompts, logs, manifests</div></div>
+        </div>
+        <div class="glass feed">
+          <div class="t">Latest in the audit log</div>
+          <div class="ev"><span class="mono">06:09</span><span><b>shiprocket v4</b> promoted to live <b class="ok">✓</b></span></div>
+          <div class="ev"><span class="mono">06:07</span><span>eval suite passed — <b>9/9</b>, write‑block probe refused <b class="ok">✓</b></span></div>
+          <div class="ev"><span class="mono">05:58</span><span>scoped token issued · <b>track:read</b> · 30 days</span></div>
+          <div class="ev"><span class="mono">05:41</span><span>credential connected → sealed in vault · <b>AES‑256‑GCM</b></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="journey">
+      <div class="t display">From spec to served — <em>four gentle steps.</em></div>
+      <div class="flow">
+        <div class="glass stepg"><span class="badge">⇣</span><h4>Ingest</h4><p>Drop an OpenAPI spec or Postman collection. We map everything your API can do.</p></div>
+        <div class="glass stepg"><span class="badge">✂</span><h4>Curate</h4><p>AI proposes task‑level tools; you review and approve every one before it ships.</p></div>
+        <div class="glass stepg"><span class="badge">✓</span><h4>Eval‑gate</h4><p>A real agent loop runs your suite against the staged release. Pass, or stay staged.</p></div>
+        <div class="glass stepg"><span class="badge">⬡</span><h4>Serve</h4><p>Promoted to one shared gateway — scoped tokens, full audit trail, instant rollback.</p></div>
+      </div>
+    </section>
+
+    <footer><span>© 2026 ProtocolFoundry</span><span class="mono">render: aurora / glass on mesh</span></footer>
+  </div>
+</body>
+</html>

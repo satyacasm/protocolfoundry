@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Theme 2 — Forgeworks (dark industrial ember)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,500;125,700;125,900&family=Geologica:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0a09;
+    --bg-2: #131110;
+    --ink: #f4efe9;
+    --ink-2: #9b938a;
+    --ember: #ff5c1f;
+    --ember-2: #ffb01f;
+    --hair: rgba(255, 240, 220, 0.10);
+    --good: #5fd99a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Geologica", sans-serif; font-weight: 300;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  .display { font-family: "Archivo", sans-serif; font-stretch: 125%; }
+  .mono { font-family: "IBM Plex Mono", monospace; }
+  a { color: inherit; text-decoration: none; }
+
+  /* molten backdrop — generated, stands in for a dark forge stock photo */
+  .furnace {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(900px 480px at 78% -10%, rgba(255, 92, 31, 0.22), transparent 64%),
+      radial-gradient(700px 420px at 12% 8%, rgba(255, 176, 31, 0.10), transparent 60%),
+      radial-gradient(1200px 800px at 50% 120%, rgba(255, 92, 31, 0.07), transparent 60%);
+  }
+  .grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .5; mix-blend-mode: overlay; }
+
+  nav {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 56px; border-bottom: 1px solid var(--hair);
+  }
+  nav .wordmark { font-family: "Archivo"; font-weight: 900; font-stretch: 125%; font-size: 15px; letter-spacing: .22em; text-transform: uppercase; }
+  nav .wordmark b { color: var(--ember); }
+  nav .links { display: flex; gap: 34px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+  nav .links .on { color: var(--ink); border-bottom: 1px solid var(--ember); padding-bottom: 3px; }
+  nav .cta { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; border: 1px solid var(--ember); color: var(--ember); padding: 10px 20px; }
+
+  main { position: relative; z-index: 5; }
+  .hero { padding: 96px 56px 70px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 60px; align-items: end; }
+  .hero .kicker { font-family: "IBM Plex Mono"; font-size: 12px; color: var(--ember-2); letter-spacing: .1em; }
+  .hero h1 {
+    margin-top: 22px;
+    font-size: clamp(58px, 7vw, 110px); font-weight: 900; line-height: 0.92;
+    text-transform: uppercase; letter-spacing: -0.01em;
+  }
+  .hero h1 .hollow { color: transparent; -webkit-text-stroke: 1.5px rgba(244, 239, 233, .55); }
+  .hero h1 .ember { background: linear-gradient(100deg, var(--ember) 10%, var(--ember-2) 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { margin-top: 30px; max-width: 52ch; font-size: 16.5px; line-height: 1.7; color: var(--ink-2); }
+  .hero .actions { margin-top: 38px; display: flex; gap: 16px; }
+  .b1 { background: var(--ember); color: #160a04; font-weight: 600; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; padding: 15px 30px; }
+  .b2 { border: 1px solid var(--hair); color: var(--ink); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; padding: 15px 30px; }
+
+  /* heat gauge column */
+  .gauge { border: 1px solid var(--hair); background: linear-gradient(180deg, rgba(255,255,255,.025), transparent); padding: 26px; }
+  .gauge .t { font-family: "IBM Plex Mono"; font-size: 11px; color: var(--ink-2); letter-spacing: .12em; display: flex; justify-content: space-between; }
+  .gauge .big { font-family: "Archivo"; font-stretch: 125%; font-weight: 900; font-size: 64px; margin: 10px 0 2px; }
+  .gauge .big sub { font-size: 18px; color: var(--ember); }
+  .rows { margin-top: 18px; border-top: 1px solid var(--hair); }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--hair); font-size: 13px; }
+  .row .mono { font-size: 12px; color: var(--ink-2); }
+  .pill { font-family: "IBM Plex Mono"; font-size: 10px; letter-spacing: .12em; padding: 4px 10px; }
+  .pill.live { color: var(--good); border: 1px solid rgba(95,217,154,.4); }
+  .pill.stage { color: var(--ember-2); border: 1px solid rgba(255,176,31,.4); }
+
+  /* ticker */
+  .ticker { border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); padding: 16px 0; overflow: hidden; white-space: nowrap; }
+  .ticker span { font-family: "IBM Plex Mono"; font-size: 12px; letter-spacing: .14em; color: var(--ink-2); margin-right: 64px; text-transform: uppercase; }
+  .ticker b { color: var(--ember); font-weight: 500; }
+
+  /* console section */
+  .consoleband { padding: 88px 56px 110px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 56px; }
+  .consoleband h2 { font-size: clamp(36px, 4vw, 56px); font-weight: 900; text-transform: uppercase; line-height: .95; }
+  .consoleband h2 em { font-style: normal; color: var(--ember); }
+  .consoleband .copy { margin-top: 24px; color: var(--ink-2); font-size: 15px; line-height: 1.75; max-width: 46ch; }
+  .steps { margin-top: 34px; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 16px 0; border-top: 1px solid var(--hair); }
+  .step .n { font-family: "Archivo"; font-stretch: 125%; font-weight: 900; color: var(--ember); font-size: 18px; }
+  .step .h { font-weight: 600; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; }
+  .step .d { font-size: 13px; color: var(--ink-2); margin-top: 4px; line-height: 1.6; }
+
+  .term {
+    border: 1px solid var(--hair); background: #0e0c0b;
+    box-shadow: 0 0 0 1px rgba(255,92,31,.06), 0 50px 120px -40px rgba(255, 92, 31, .18);
+    align-self: start;
+  }
+  .term .bar { display: flex; gap: 7px; padding: 13px 16px; border-bottom: 1px solid var(--hair); }
+  .term .bar i { width: 9px; height: 9px; border-radius: 50%; background: #2c2724; }
+  .term pre { font-family: "IBM Plex Mono"; font-size: 12.5px; line-height: 1.9; padding: 22px 24px; color: var(--ink-2); overflow: hidden; }
+  .term pre b { color: var(--ink); font-weight: 500; }
+  .term pre .e { color: var(--ember); }
+  .term pre .g { color: var(--good); }
+  .term pre .y { color: var(--ember-2); }
+
+  footer { border-top: 1px solid var(--hair); padding: 22px 56px; display: flex; justify-content: space-between; font-family: "IBM Plex Mono"; font-size: 11px; letter-spacing: .12em; color: var(--ink-2); text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <svg class="grain" width="100%" height="100%"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.06"/></feComponentTransfer></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+  <div class="furnace"></div>
+
+  <main>
+    <nav>
+      <span class="wordmark">Protocol<b>Foundry</b></span>
+      <div class="links"><span class="on">Overview</span><span>Forge</span><span>Releases</span><span>Audit</span></div>
+      <span class="cta">Console →</span>
+    </nav>
+
+    <section class="hero">
+      <div>
+        <div class="kicker">// control plane · gateway us-west · 3 servers live</div>
+        <h1 class="display">Forge<br /><span class="hollow">your API into</span><br /><span class="ember">agent steel.</span></h1>
+        <p>Hosted MCP servers, smelted from the APIs you already own. Every tool is curated, every release passes the eval gate, every call is audited. No codegen — one manifest‑interpreted gateway.</p>
+        <div class="actions"><span class="b1">Forge a server</span><span class="b2">Read the manifest</span></div>
+      </div>
+
+      <aside class="gauge">
+        <div class="t"><span>FOUNDRY STATUS</span><span class="mono">06:11 UTC</span></div>
+        <div class="big display">92<sub>% eval pass</sub></div>
+        <div class="rows">
+          <div class="row"><span>shiprocket <span class="mono">v4 · 12 tools</span></span><span class="pill live">LIVE</span></div>
+          <div class="row"><span>petstore <span class="mono">v2 · 8 tools</span></span><span class="pill live">LIVE</span></div>
+          <div class="row"><span>billing‑api <span class="mono">v1 · 14 tools</span></span><span class="pill stage">STAGED</span></div>
+          <div class="row"><span>audit events <span class="mono">24 h</span></span><span class="mono">1,284 ✓</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="ticker">
+      <span>release <b>shiprocket v4</b> promoted</span><span>eval suite <b>read‑only 9/9</b> green</span><span>write‑block probe <b>refused ✓</b></span><span>scoped token issued <b>track:read</b></span><span>vault <b>AES‑256‑GCM</b> sealed</span><span>release <b>shiprocket v4</b> promoted</span>
+    </div>
+
+    <section class="consoleband">
+      <div>
+        <h2 class="display">The gate<br />is the <em>product.</em></h2>
+        <p class="copy">Anyone can wrap an API. ProtocolFoundry refuses to ship tools that fail in an agent's hands — a real agent loop hammers every staged release before the gateway will serve it.</p>
+        <div class="steps">
+          <div class="step"><span class="n">01</span><div><div class="h">Ingest</div><div class="d">OpenAPI or Postman in. Workflow graph out.</div></div></div>
+          <div class="step"><span class="n">02</span><div><div class="h">Curate</div><div class="d">LLM proposes task‑level tools; a human signs off.</div></div></div>
+          <div class="step"><span class="n">03</span><div><div class="h">Eval‑gate</div><div class="d">Agent‑loop suite vs. staged release. Pass or it stays staged.</div></div></div>
+          <div class="step"><span class="n">04</span><div><div class="h">Serve & audit</div><div class="d">Promote to the shared gateway. Every call logged, every credential vaulted.</div></div></div>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <pre>$ <b>pf eval shiprocket --release v4</b>
+<span class="e">⏵</span> staging manifest on loopback gateway :61423
+<span class="e">⏵</span> agent loop · claude-opus-4-8 · 9 tasks
+
+  task 01  track_order ............ <span class="g">PASS</span>  3 calls
+  task 02  create_shipment ........ <span class="g">PASS</span>  5 calls
+  task 03  rate_quote ............. <span class="g">PASS</span>  2 calls
+  task 07  cancel_unauthorized .... <span class="g">PASS</span>  <span class="y">write blocked ✓</span>
+  task 09  bulk_manifest .......... <span class="g">PASS</span>  6 calls
+
+<span class="g">✓ 9/9 passed</span> · 0 secrets in transcript
+$ <b>pf release promote shiprocket v4</b>
+<span class="e">⏵</span> v3 → retired · <b>v4 → LIVE</b> on /mcp/shiprocket</pre>
+      </div>
+    </section>
+  </main>
+
+  <footer><span>© 2026 ProtocolFoundry</span><span>render: forgeworks / ember on coal</span></footer>
+</body>
+</html>
