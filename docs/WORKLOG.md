@@ -7,6 +7,45 @@ honest and terse.
 
 ---
 
+## 2026-06-11 — Session 16: dashboard redesign — "porcelain" design language
+
+### Done
+
+- **Full visual redesign of `apps/web`** to a light, Apple-product-page
+  aesthetic ("porcelain"), chosen from 4 mockup directions
+  (`design-themes/`): studio-light surfaces, hairline borders, rounded
+  cards with layered shadows, Schibsted Grotesk display / Instrument Sans
+  text / Spline Sans Mono.
+- **Motion**: scroll-progress rail under the fixed glass nav; soft
+  rise-on-scroll reveals (`<Reveal>`, IntersectionObserver); parallax hero
+  (`<Parallax>`, rAF) with a studio backdrop and floating machined-metal
+  elements; hover micro-interactions; `prefers-reduced-motion` respected
+  throughout (`src/components/scrollfx.tsx`).
+- **Loading graphics**: hexagonal brand-mark spinner + indeterminate bar
+  (`src/components/loader.tsx`), wired as the route-level `loading.tsx`.
+- **Generated art assets** (`public/art/`): all imagery is authored in-repo
+  (SVG → transparent PNGs rendered via headless Chromium), so it is
+  copyright-free by construction — the sandbox's network policy blocks
+  stock-photo CDNs (Unsplash/Pexels/picsum all 403), so nothing external
+  is hotlinked.
+- Overview page got an Apple-style hero (full-bleed, parallax, CTAs);
+  every other page restyles automatically via the shared classes in
+  `globals.css` (all class names kept). Responsive pass for phones.
+- 47 tests green; production `next build` clean.
+
+### Decisions
+
+- Theme direction "porcelain" picked by operator preference for an
+  apple.com-like product feel; other three mockups kept in
+  `design-themes/` for reference.
+
+### Next steps
+
+- Consider real stock photography (hotlinked Unsplash) once deployed —
+  browsers can fetch what this sandbox cannot.
+
+---
+
 ## 2026-06-11 — Session 15: production deployment on Render (ADR-0009)
 
 ### Done
