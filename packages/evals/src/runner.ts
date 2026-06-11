@@ -3,7 +3,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { EvalRun, resolveClaudeModel, type EvalTaskResult } from "@protocolfoundry/core";
+import {
+  EvalRun,
+  resolveClaudeModel,
+  supportsAdaptiveThinking,
+  type EvalTaskResult,
+} from "@protocolfoundry/core";
 
 /** One realistic task an agent should be able to complete via the server. */
 export interface EvalTask {
@@ -93,7 +98,7 @@ export function createAnthropicAgent(
 ): AgentModel {
   const model = resolveClaudeModel(modelOrAlias);
   const client = new Anthropic();
-  const adaptive = options.adaptiveThinking ?? true;
+  const adaptive = options.adaptiveThinking ?? supportsAdaptiveThinking(model);
   return {
     model,
     async turn(messages, tools) {
