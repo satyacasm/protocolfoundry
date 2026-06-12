@@ -7,6 +7,38 @@ honest and terse.
 
 ---
 
+## 2026-06-12 — Session 19: credential redaction in executor errors, overview FAQ + 3D frontend
+
+### Done
+
+- **Security fix (HIGH finding on pushed code)**: the executor's
+  "upstream unreachable" error interpolated the full request URL, which
+  leaks apiKey secrets applied with `in: "query"`; `upstreamCalls[].url`
+  had the same exposure in logs/audit. Errors now strip the query string
+  entirely; call records keep non-secret params but mask auth-carrying
+  ones as `***`. TDD'd (two new executor tests, one against a live local
+  listener). Pushed as `ec21e1d`.
+- **Overview page upgrade** (porcelain language kept): new FAQ accordion
+  as section 01 describing the product (what ProtocolFoundry is, MCP,
+  docs-URL ingestion, eval gates, credential handling, manifest-interpreted
+  gateway — six items, single-open, grid-rows height animation); real CSS
+  3D in the hero — a machined hexagonal prism (`preserve-3d` faces + caps)
+  with orbital hairline rings and motes that spins and tilts toward the
+  pointer (`foundry3d.tsx`), replacing the torus PNG; 3D pointer-tilt +
+  glare on project cards; two royalty-free Unsplash photos
+  (`bg-facade.jpg`, `bg-volume.jpg`) masked in as low-opacity backdrop
+  elements (hero left edge, FAQ right edge, activity left edge).
+  All motion gated behind `prefers-reduced-motion`; photos/prism hidden
+  on mobile. Verified in-browser at 1440px and 390px (accordion, tilt
+  vars, layout).
+
+### Open questions / next steps
+
+- Favicon 404 on the dashboard (pre-existing, cosmetic).
+- Consider reusing the FAQ/3D treatments on the login and forge pages.
+
+---
+
 ## 2026-06-11 — Session 18: customer bundle verified, multi-page docs crawl, upstream-error clarity
 
 ### Done

@@ -2,6 +2,8 @@
 import { dataSourceInfo, getProjects, readAuditEvents } from "@/lib/data";
 import { formatWhen, Gauge, SectionHead, StatusBadge } from "@/components/ui";
 import { Parallax, Reveal } from "@/components/scrollfx";
+import { Faq } from "@/components/faq";
+import { FoundryPrism, Tilt } from "@/components/foundry3d";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +20,15 @@ export default async function OverviewPage() {
         <Parallax speed={0.35} className="hero-backdrop">
           <span />
         </Parallax>
+        <Parallax speed={0.18} className="hero-photo">
+          <span />
+        </Parallax>
         <Parallax speed={-0.1} className="hero-el el-ingot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/art/element-ingot.png" alt="" />
         </Parallax>
-        <Parallax speed={-0.22} className="hero-el el-torus">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/art/element-torus.png" alt="" />
+        <Parallax speed={-0.22} className="hero-el el-prism">
+          <FoundryPrism />
         </Parallax>
         <Parallax speed={-0.16} className="hero-el el-hexnode">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -74,9 +78,19 @@ export default async function OverviewPage() {
         </div>
       </Reveal>
 
+      <section className="section faq-section">
+        <span className="faq-bg" aria-hidden="true" />
+        <Reveal>
+          <SectionHead no="01" title="What is this place?" meta="six answers, no tour required" />
+        </Reveal>
+        <Reveal delay={80}>
+          <Faq />
+        </Reveal>
+      </section>
+
       <section className="section">
         <Reveal>
-          <SectionHead no="01" title="Projects" meta={releasesDir} />
+          <SectionHead no="02" title="Projects" meta={releasesDir} />
         </Reveal>
         {projects.length === 0 ? (
           <Reveal>
@@ -89,6 +103,7 @@ export default async function OverviewPage() {
           <div className="projects">
             {projects.map((project, i) => (
               <Reveal key={project.projectId} delay={i * 70}>
+                <Tilt>
                 <Link
                   href={`/projects/${project.projectId}`}
                   className={`project-card${project.live ? " is-live" : ""}`}
@@ -118,15 +133,17 @@ export default async function OverviewPage() {
                     </div>
                   ) : null}
                 </Link>
+                </Tilt>
               </Reveal>
             ))}
           </div>
         )}
       </section>
 
-      <section className="section">
+      <section className="section activity-section">
+        <span className="activity-bg" aria-hidden="true" />
         <Reveal>
-          <SectionHead no="02" title="Recent activity" meta="audit log, newest first" />
+          <SectionHead no="03" title="Recent activity" meta="audit log, newest first" />
         </Reveal>
         {recentAudit.length === 0 ? (
           <Reveal>
