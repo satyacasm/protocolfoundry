@@ -77,7 +77,10 @@ function applyAuth(
     }
     case "bearer":
     case "oauth2":
-      headers["Authorization"] = `Bearer ${secret}`;
+      // A secret containing a space already names its scheme (e.g. Kite
+      // Connect's `token api_key:access_token`); send it verbatim. Real
+      // bearer tokens never contain spaces.
+      headers["Authorization"] = secret.includes(" ") ? secret : `Bearer ${secret}`;
       break;
     case "basic":
       headers["Authorization"] = `Basic ${Buffer.from(secret).toString("base64")}`;

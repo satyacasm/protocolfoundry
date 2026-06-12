@@ -15,6 +15,22 @@ const SPEC = JSON.stringify({
   },
 });
 
+const OAUTH_SPEC = JSON.stringify({
+  openapi: "3.0.0",
+  info: { title: "Things API" },
+  components: {
+    securitySchemes: {
+      login: { type: "oauth2", flows: {} },
+    },
+  },
+  security: [{ login: [] }],
+  paths: {
+    "/things": {
+      get: { operationId: "listThings", summary: "List things", responses: { "200": { description: "ok" } } },
+    },
+  },
+});
+
 const QUERY_KEY_SPEC = JSON.stringify({
   openapi: "3.0.0",
   info: { title: "Things API" },
@@ -71,6 +87,39 @@ describe("executePlan network failures", () => {
     expect(failure).toContain("http://127.0.0.1:59999/things");
     expect(failure).not.toContain("supersecret123");
     expect(failure).not.toContain("api_key");
+  });
+
+  it("passes a secret with its own scheme prefix through raw (Kite-style 'token key:secret')", async () => {
+    let seenAuth: string | undefined;
+    const server = createServer((req, res) => {
+      seenAuth = req.headers["authorization"];
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ status: "success" }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as AddressInfo).port;
+
+    try {
+      const graph = ingestOpenApi(OAUTH_SPEC, "proj", "src-test");
+      const manifest = generateManifest(
+        graph,
+        { operationIds: ["listThings"], taskFlowIds: [] },
+        { serverName: "things", baseUrls: { default: `http://127.0.0.1:${port}` } },
+      );
+      const tool = manifest.tools[0]!;
+
+      // Plain token: Bearer prefix applied as before.
+      await executePlan(manifest, tool, {}, () => "plain-secret");
+      expect(seenAuth).toBe("Bearer plain-secret");
+
+      // Secret that already names its scheme (Kite Connect): sent verbatim.
+      await executePlan(manifest, tool, {}, () => "token apikey:accesstoken");
+      expect(seenAuth).toBe("token apikey:accesstoken");
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+    }
   });
 
   it("redacts query-string credentials in the upstream call record", async () => {

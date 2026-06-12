@@ -32,10 +32,27 @@ honest and terse.
   on mobile. Verified in-browser at 1440px and 390px (accordion, tilt
   vars, layout).
 
+- **Kite Connect auth diagnosis + fix**: user's zerodha-api-docs eval showed
+  92% tool selection but 16% completion. Probed api.kite.trade live: it
+  rejects `Authorization: Bearer …` with 400 "unknown Authorization scheme"
+  (InputException) — Kite requires `Authorization: token api_key:access_token`.
+  The executor's bearer/oauth2 branch always prefixed `Bearer `, so every
+  upstream call failed; the agent still picked the right tools (selection
+  counts failed calls) but could never complete tasks. Fix: a secret that
+  already contains a space is sent verbatim (it names its own scheme), so
+  re-vaulting the credential as `token <key>:<token>` fixes the live server
+  with no re-forge. TDD'd against a local header-echo listener.
+  `X-Kite-Version: 3` confirmed NOT required.
+
 ### Open questions / next steps
 
 - Favicon 404 on the dashboard (pre-existing, cosmetic).
 - Consider reusing the FAQ/3D treatments on the login and forge pages.
+- Kite access tokens expire daily — the vaulted credential must be refreshed
+  each trading day; consider a credential-freshness warning in the dashboard.
+- If Kite eval completion stays low after the auth fix, check composed-tool
+  bindings against Kite's `{"status","data":{…}}` response envelope
+  (`$steps[n].output.data.<field>`, not `.<field>`).
 
 ---
 
