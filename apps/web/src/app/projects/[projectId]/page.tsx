@@ -125,7 +125,7 @@ export default async function ProjectPage({
                   {release.approvedBy ? (
                     <span className="chip warn">forced · {release.approvedBy}</span>
                   ) : null}
-                  {writesEnabled && release.status === "staged" ? (
+                  {writesEnabled && (release.status === "staged" || release.status === "live") ? (
                     <form action={startEval} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                       <input type="hidden" name="projectId" value={projectId} />
                       <input type="hidden" name="version" value={release.version} />

@@ -7,6 +7,44 @@ honest and terse.
 
 ---
 
+## 2026-06-13 — Session 21: eval re-run on live releases + glossary widget
+
+### Done
+
+- **Composed-tool binding fix** (shipped `1567129`): the gateway binding
+  resolver couldn't follow array indices, so curated composed plans that
+  reference `$steps[0].output.results[0].id` (the first search hit) resolved
+  `undefined` → "Missing required path parameter". Added a `parsePath`
+  tokenizer (`results[0].id` → `results, 0, id`) used in both `$args`/`$steps`
+  resolution, plus `resolveBinding` unit tests. Found during the TMDB demo.
+- **Eval re-run on live releases**: the project page only showed the eval
+  form (model picker + Run/Re-run) for `staged` releases, so once a server
+  was promoted there was no way to re-evaluate it. Now the form renders for
+  `live` releases too (`startEval` already accepted any version; this was a
+  pure UI gate). Promote stays staged-only. Verified locally: the live TMDB
+  v1 shows `haiku ▼` + "Re-run eval".
+- **Glossary help widget** (`components/glossary.tsx`): a fixed "? Terms"
+  button on every page opens a plain-language popover defining MCP server,
+  tool, manifest, curation, composed tool, eval run, gate, release,
+  credential/vault, gateway, approval gate, audit log — for non-technical
+  operators. Closes on Esc / outside click. Styled with the porcelain tokens.
+
+### Notes for prod (Render, auto-deploys from `main`)
+
+- Login page is up at the web host → `PF_DASHBOARD_PASSWORD` is set (not open
+  mode), so write controls render once logged in.
+- For the eval Run/Re-run button to actually work in prod, `ANTHROPIC_API_KEY`
+  must be a **real** key in Render (the blueprint ships a placeholder), an
+  eval **suite** must be uploaded, and the upstream **credential** connected
+  (so the ephemeral eval gateway's tool calls reach the real API).
+
+### Open questions / next steps
+
+- Couldn't fully verify authenticated prod pages (no prod password in hand);
+  same code as the verified local run is now deploying.
+
+---
+
 ## 2026-06-12 — Session 20: credential onboarding (ADR-0011) + quickstart sync
 
 ### Done

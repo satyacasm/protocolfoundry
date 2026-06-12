@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Instrument_Sans, Schibsted_Grotesk, Spline_Sans_Mono } from "next/font/google";
 import { ScrollProgress } from "@/components/scrollfx";
+import { Glossary } from "@/components/glossary";
 import "./globals.css";
 
 const display = Schibsted_Grotesk({
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span>© 2026 ProtocolFoundry</span>
           <span className="mono">eval-gated MCP servers · one gateway</span>
         </footer>
+        <Glossary />
       </body>
     </html>
   );

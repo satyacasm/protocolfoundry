@@ -1540,4 +1540,66 @@ input[type="file"]::file-selector-button:hover {
   .f3d-spin, .f3d-ring, .f3d-mote, .f3d-shadow { animation: none; }
   .faq-a { transition: none; }
   .tilt > * { transition: none; }
+  .glossary-panel { animation: none; }
 }
+
+/* ---- Glossary help widget ---------------------------------------------- */
+.glossary {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1000;
+  font-family: var(--font-sans);
+}
+.glossary-fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-bright);
+  background: var(--bg-raised);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-float);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.glossary-fab:hover { transform: translateY(-1px); }
+.glossary-fab .q {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.glossary-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(380px, calc(100vw - 44px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  padding: 18px 20px 8px;
+  animation: glossPop 0.18s ease;
+}
+@keyframes glossPop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.glossary-head { margin-bottom: 12px; }
+.glossary-head strong { display: block; font-size: 16px; font-family: var(--font-display); }
+.glossary-head span { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
+.glossary-list { margin: 0; }
+.glossary-item { padding: 11px 0; border-top: 1px solid var(--line); }
+.glossary-item dt { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.glossary-item dd { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
