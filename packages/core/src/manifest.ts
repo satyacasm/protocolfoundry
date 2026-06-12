@@ -74,6 +74,24 @@ export const CredentialBinding = z.object({
 });
 export type CredentialBinding = z.infer<typeof CredentialBinding>;
 
+/**
+ * Operator-authored walkthrough for obtaining one upstream credential —
+ * shown on the dashboard's connect form and referenced by gateway errors.
+ * Instructions only; the secret itself always goes straight to the vault.
+ */
+export const CredentialGuide = z.object({
+  /** Human name, e.g. "Kite Connect access token". */
+  title: z.string().min(1),
+  /** The exact shape of the value to paste, e.g. "token <api_key>:<access_token>". */
+  valueFormat: z.string().min(1),
+  /** Ordered steps for fetching the credential from the upstream provider. */
+  steps: z.array(z.string().min(1)).min(1),
+  helpUrl: z.string().url().optional(),
+  /** Expiry/rotation behaviour the operator must know, e.g. "expires daily". */
+  rotation: z.string().optional(),
+});
+export type CredentialGuide = z.infer<typeof CredentialGuide>;
+
 export const McpServerManifest = z.object({
   manifestVersion: z.literal(1),
   projectId: z.string(),
@@ -89,6 +107,8 @@ export const McpServerManifest = z.object({
   resources: z.array(ResourceDefinition).default([]),
   prompts: z.array(PromptDefinition).default([]),
   credentialBindings: z.array(CredentialBinding),
+  /** Setup walkthroughs keyed by authRequirementId (instructions, never secrets). */
+  credentialGuides: z.record(CredentialGuide).default({}),
   /** Graph snapshot this manifest was generated from (provenance). */
   workflowGraphRef: z.string(),
   createdAt: z.string().datetime(),

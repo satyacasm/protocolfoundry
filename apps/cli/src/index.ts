@@ -60,6 +60,11 @@ Usage:
       Apply the approved parts of a curation proposal -> curated manifest.
       Defaults to accepting everything (review the proposal first!).
 
+  pf creds <manifest.json>
+      List the upstream credentials a manifest needs, with per-credential
+      setup steps (credentialGuides) and how to connect them (dashboard
+      Credentials panel, or pf vault set).
+
   pf eval <suite.json> --endpoint <mcp-url> [--key <gateway-key>]
           [--model haiku|sonnet|opus|fable|<id>] [--manifest-ref <ref>] [--project <id>]
           [-o <evalrun.json>] [--report <report.md>]
@@ -260,6 +265,36 @@ async function main(): Promise<void> {
       const kind = tool.plan.length > 1 ? `composed[${tool.plan.length} steps]` : "1:1";
       const gate = tool.approval === "perCall" ? "  [requires approval]" : "";
       console.log(`  ${tool.name}  (${kind})${gate}`);
+    }
+    return;
+  }
+
+  if (command === "creds") {
+    const manifestPath = positional[0];
+    if (!manifestPath) {
+      console.error(USAGE);
+      process.exit(1);
+    }
+    const manifest = McpServerManifest.parse(JSON.parse(await readFile(manifestPath, "utf8")));
+    if (manifest.credentialBindings.length === 0) {
+      console.log(`"${manifest.serverName}" needs no upstream credentials.`);
+      return;
+    }
+    console.log(`"${manifest.serverName}" needs ${manifest.credentialBindings.length} credential(s):\n`);
+    for (const binding of manifest.credentialBindings) {
+      const scheme = manifest.authSchemes[binding.authRequirementId];
+      const guide = manifest.credentialGuides[binding.authRequirementId];
+      console.log(`${binding.vaultCredentialId}  (${scheme?.kind ?? "unknown"})`);
+      if (guide) {
+        console.log(`  ${guide.title} — value format: ${guide.valueFormat}`);
+        guide.steps.forEach((step, i) => console.log(`    ${i + 1}. ${step}`));
+        if (guide.rotation) console.log(`    Rotation: ${guide.rotation}`);
+        if (guide.helpUrl) console.log(`    Docs: ${guide.helpUrl}`);
+      }
+      const row = binding.vaultCredentialId.replace(/^(env|vault):/, "");
+      console.log(`  Connect it: dashboard -> project "${manifest.projectId}" -> Credentials,`);
+      console.log(`  or: pf vault set ${row} --secret "<value>"   (requires PF_VAULT_KEY)`);
+      console.log("");
     }
     return;
   }

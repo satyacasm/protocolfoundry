@@ -114,7 +114,21 @@ Credentials the gateway needs (env vars):
   PF_CRED_APIKEYAUTH
 ```
 
-Set those to real credentials for YOUR app (API key, bearer token, or
+To see what each credential is and how to obtain it (setup steps, value
+format, rotation notes), ask the manifest:
+
+```powershell
+npm run dev -w @protocolfoundry/cli -- creds manifest.json
+```
+
+`pf creds` lists every binding with its per-credential guide (if the manifest
+carries one — otherwise generic per-auth-kind instructions) and the two ways
+to connect it: the dashboard **Credentials** panel (step 8) or `pf vault set`.
+
+You have three ways to supply the actual secret — pick one:
+
+**Option 1 — env vars (simplest for a single local server).**
+Set them to real credentials for YOUR app (API key, bearer token, or
 `user:pass` for basic auth), pick a gateway key that agents must present, and
 start the gateway:
 
@@ -132,7 +146,7 @@ Notes:
 - `$env:PF_APPROVE_ALL = "true"` lets gated (destructive) tools execute; leave
   it unset to keep them blocked.
 
-> **Encrypted vault instead of env vars (recommended):**
+> **Option 2 — encrypted vault (recommended over plaintext env vars):**
 >
 > ```powershell
 > $env:PF_VAULT_KEY = (npm run -s dev -w @protocolfoundry/cli -- keygen)
@@ -141,7 +155,17 @@ Notes:
 >
 > Start the gateway with the same `PF_VAULT_KEY` and drop the plaintext env
 > var — `env:` bindings fall back to the vault automatically. Keep the key
-> safe; secrets are AES-256-GCM sealed on disk (or in Postgres).
+> safe; secrets are AES-256-GCM sealed on disk (or in Postgres). A vault write
+> is live immediately — no gateway restart.
+>
+> **Option 3 — paste it into the dashboard (no CLI, no restart; ADR-0011):**
+> Once the server is staged as a release (step 7) and the dashboard is running
+> with `PF_VAULT_KEY` (+ `PF_DATABASE_URL`), its project page shows a
+> **Credentials** panel: one slot per binding, the setup guide, and a
+> paste-to-connect form. Submitted values are sealed straight into the same
+> shared vault the gateway reads, so the credential goes live without an env
+> change or restart. This is how a non-operator hands over a secret (e.g. an
+> API key whose token rotates daily). See step 8.
 >
 > **Least-privilege agent tokens instead of the master API key:**
 >
@@ -230,12 +254,24 @@ one command if agents misbehave.
 $env:PF_RELEASES_DIR        = "releases"
 $env:PF_AUDIT_LOG           = "audit.log.jsonl"
 $env:PF_DASHBOARD_PASSWORD  = "<pick an operator password>"   # omit = open mode (banner)
+$env:PF_VAULT_KEY           = "<same key the gateway uses>"   # enables the Credentials panel
+$env:PF_DATABASE_URL        = "<postgres url>"                # shared vault store for credentials
 npm run dev -w @protocolfoundry/web
 # -> http://localhost:3100 (log in with the password)
 ```
 
 Projects, release timelines with eval gauges, the exact tool surface agents
 see, full eval reports, and the audit log with approval-gate events.
+
+> **Connect credentials here (ADR-0011):** each project page has a
+> **Credentials** panel — one slot per upstream binding, with its setup guide,
+> connect status, and a paste-to-connect form. Pasted secrets are sealed into
+> the shared vault and read by the gateway immediately (no restart, no env
+> vars); secrets never appear in manifests, logs, or LLM prompts, and
+> connect/revoke is audited by binding id only. Needs `PF_DASHBOARD_PASSWORD`
+> (writes are off in open mode) and `PF_VAULT_KEY` (+ `PF_DATABASE_URL`) so the
+> dashboard and gateway share one vault. This is the recommended way to hand
+> over a credential without prod env access — it's option 3 from step 4.
 
 > **Prefer clicking to typing?** The dashboard's **Forge** page covers steps
 > 1–3 in the browser: upload the spec (or paste its URL), review/check the
@@ -253,7 +289,7 @@ see, full eval reports, and the audit log with approval-gate events.
 |---|---|
 | `Unsupported OpenAPI version` | Spec is Swagger 2.0 — convert to OpenAPI 3 (e.g. `npx swagger2openapi spec.json`) |
 | `No upstream base URL known` | Spec lacks `servers:` — pass `--base-url https://app.example.com` to generate/apply |
-| Tool fails: `Credential "env:PF_CRED_X" is not configured` | Set that env var in the gateway's shell before starting it |
+| Tool fails: `Credential "env:PF_CRED_X" is not configured on the gateway` | Connect it — env var in the gateway's shell, `pf vault set`, or the dashboard **Credentials** panel (step 4). The error names the project + panel so an agent transcript tells the human exactly where to go. |
 | 401 from the MCP endpoint | Agent isn't sending `Authorization: Bearer <PF_GATEWAY_API_KEY>` |
 | Tool returns `requires per-call human approval` | Working as intended (destructive op); set `PF_APPROVE_ALL=true` only if you mean it |
 | Upstream 4xx/5xx in tool results | The gateway surfaces upstream errors verbatim — test the API directly with the same credentials |
@@ -263,8 +299,11 @@ see, full eval reports, and the audit log with approval-gate events.
 ## Current limitations (roadmap items)
 
 - Spec-first only: no UI crawling/HAR ingestion yet (Phase 4).
-- Upstream auth: apiKey / bearer / basic. OAuth upstream flows and the real
-  credential vault are Phase 3 work (env vars stand in for the vault today).
+- Upstream auth: apiKey / bearer / basic, connected via env var, `pf vault
+  set`, or the dashboard Credentials panel (ADR-0011). OAuth upstream flows are
+  still Phase 3. One credential set per server today — every caller of a hosted
+  server shares the operator-connected upstream account (per-caller credentials
+  need their own ADR).
 - Agent-side auth is a static gateway key; OAuth 2.1 per the MCP spec is
   planned.
 - Local hosting only — managed cloud hosting is the eventual product.

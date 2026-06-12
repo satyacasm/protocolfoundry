@@ -7,6 +7,48 @@ honest and terse.
 
 ---
 
+## 2026-06-12 — Session 20: credential onboarding (ADR-0011) + quickstart sync
+
+### Done
+
+- **Credential onboarding flow (ADR-0011)**: customers, not platform
+  operators, hold upstream credentials (Kite's daily access token, Chargebee
+  keys, …), but the only connect paths were prod env vars (restart per
+  credential) or `pf vault set` (needs PF_VAULT_KEY in hand) — and nowhere to
+  tell a user *how* to obtain a given credential. Added:
+  - `credentialGuides` map on `McpServerManifest` (keyed by authRequirementId:
+    `title`, `valueFormat`, ordered `steps`, optional `helpUrl`/`rotation`) —
+    instructions only, never secrets. Old manifests parse unchanged (`{}`).
+  - Dashboard **Credentials** panel on the project page: one slot per binding
+    with guide (manifest-authored, else generic per-auth-kind fallback in
+    `credentials.ts`), connect status (vault row present), and a
+    paste-to-connect form. Secrets seal straight into the shared vault
+    (`PF_VAULT_KEY` + Postgres, same key the gateway decrypts with), live
+    immediately with no restart; connect/revoke audited by binding id only.
+  - Gateway missing-credential error now names the binding, project, and
+    Credentials panel (+ guide title when present) so an agent transcript
+    tells the human exactly where to go.
+  - `pf creds <manifest.json>` CLI: prints bindings, guides, and both connect
+    paths (dashboard or `pf vault set`).
+- **Quickstart synced** (`docs/guides/local-quickstart.md`, per CLAUDE.md
+  convention): step 4 now documents `pf creds` and presents three connect
+  options (env var / vault / dashboard panel); step 8 documents the
+  Credentials panel and the `PF_VAULT_KEY` + `PF_DATABASE_URL` it needs;
+  troubleshooting row for the missing-credential error and the "vault is
+  Phase 3" limitation updated to match reality.
+
+### Open questions / next steps
+
+- Guides aren't authored by the generator/curation yet — manifests ship `{}`
+  and the dashboard/CLI use generic fallback guides. Authoring real guides
+  (e.g. Kite's request-token dance) during curation is the natural follow-up.
+- Still one credential set per server (every caller shares the
+  operator-connected account); true per-caller credentials need their own ADR.
+- Public self-service submission page (customers paste keys without an
+  operator session) is explicitly out of scope in ADR-0011.
+
+---
+
 ## 2026-06-12 — Session 19: credential redaction in executor errors, overview FAQ + 3D frontend
 
 ### Done

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { promoteRelease, rollbackRelease } from "@/lib/actions";
+import { connectCredential, disconnectCredential } from "@/lib/credential-actions";
+import { getVault, listCredentialSlots } from "@/lib/credentials";
 import { store } from "@/lib/data";
 import { generateSuiteFromManifest, startEval, uploadEvalSuite } from "@/lib/eval-actions";
 import { isEvalRunning, readEvalJob, type EvalJob } from "@/lib/eval-jobs";
@@ -63,6 +65,9 @@ export default async function ProjectPage({
   const anyJobActive = sorted.some(
     (r) => evalJobs.get(r.version)?.status === "running" && isEvalRunning(projectId, r.version),
   );
+  const newestManifest = await store.getManifest(projectId, sorted[0]!.version);
+  const credentialSlots = await listCredentialSlots(newestManifest);
+  const vaultReady = Boolean(getVault());
 
   return (
     <main className="reveal">
@@ -174,9 +179,91 @@ export default async function ProjectPage({
         </div>
       </section>
 
+      {credentialSlots.length > 0 ? (
+        <section className="section">
+          <SectionHead
+            no="02"
+            title="Credentials"
+            meta={`${credentialSlots.filter((s) => s.inVault).length}/${credentialSlots.length} connected`}
+          />
+          <p className="lede" style={{ fontSize: 13 }}>
+            Upstream credentials this server needs. Pasted values are sealed into the
+            encrypted vault and picked up by the gateway immediately — no restart, no env
+            vars. Secrets never appear in manifests, logs, or LLM prompts.
+          </p>
+          {credentialSlots.map((slot) => (
+            <div key={slot.vaultCredentialId} className="panel" style={{ marginBottom: 14 }}>
+              <div className="row-head" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <strong>{slot.guide.title}</strong>
+                <span className="chip">{slot.kind}</span>
+                <span className="chip mono">{slot.vaultCredentialId}</span>
+                {slot.inVault ? (
+                  <span className="chip" style={{ color: "var(--status-live)", borderColor: "rgba(29,125,79,0.35)" }}>
+                    connected
+                  </span>
+                ) : (
+                  <span className="chip warn">not connected</span>
+                )}
+              </div>
+              <ol style={{ margin: "12px 0 4px", paddingLeft: 22, color: "var(--ink-2)", fontSize: 13.5, lineHeight: 1.6 }}>
+                {slot.guide.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              <p className="faint" style={{ fontSize: 12.5, margin: "6px 0 12px" }}>
+                Value format: <code>{slot.guide.valueFormat}</code>
+                {slot.guide.rotation ? <> · {slot.guide.rotation}</> : null}
+                {slot.guide.helpUrl ? (
+                  <>
+                    {" · "}
+                    <a href={slot.guide.helpUrl} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                      provider docs
+                    </a>
+                  </>
+                ) : null}
+              </p>
+              {writesEnabled ? (
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <form action={connectCredential} style={{ display: "flex", gap: 8, flex: "1 1 380px" }}>
+                    <input type="hidden" name="projectId" value={projectId} />
+                    <input type="hidden" name="vaultCredentialId" value={slot.vaultCredentialId} />
+                    <input
+                      type="password"
+                      name="secret"
+                      className="gate-input"
+                      style={{ flex: 1 }}
+                      placeholder={slot.guide.valueFormat}
+                      autoComplete="off"
+                      disabled={!vaultReady}
+                    />
+                    <button type="submit" className="action-button" disabled={!vaultReady}>
+                      {slot.inVault ? "Replace" : "Connect"}
+                    </button>
+                  </form>
+                  {slot.inVault ? (
+                    <form action={disconnectCredential}>
+                      <input type="hidden" name="projectId" value={projectId} />
+                      <input type="hidden" name="vaultCredentialId" value={slot.vaultCredentialId} />
+                      <button type="submit" className="action-button danger">
+                        Remove
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              ) : null}
+              {!vaultReady ? (
+                <p className="faint" style={{ fontSize: 12, marginTop: 8 }}>
+                  Vault unavailable — set PF_VAULT_KEY (and PF_DATABASE_URL) on this dashboard.
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </section>
+      ) : null}
+
       <section className="section">
         <SectionHead
-          no="02"
+          no={credentialSlots.length > 0 ? "03" : "02"}
           title="Eval suite"
           meta={
             suite

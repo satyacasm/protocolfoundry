@@ -141,8 +141,12 @@ async function buildRequest(
     if (!binding) throw new Error(`No credential bound for auth scheme "${authId}"`);
     const secret = await resolveCredential(binding.vaultCredentialId);
     if (!secret) {
+      const guide = manifest.credentialGuides[authId];
       throw new Error(
-        `Credential "${binding.vaultCredentialId}" is not configured on the gateway`,
+        `Credential "${binding.vaultCredentialId}" is not configured on the gateway. ` +
+          `An operator can connect it in the ProtocolFoundry dashboard under project "${manifest.projectId}" → Credentials` +
+          (guide ? ` (${guide.title}; the setup steps are shown there)` : "") +
+          `.`,
       );
     }
     applyAuth(scheme, secret, headers, query, secretQueryParams);

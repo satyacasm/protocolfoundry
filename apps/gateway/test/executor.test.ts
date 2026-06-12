@@ -122,6 +122,27 @@ describe("executePlan network failures", () => {
     }
   });
 
+  it("points the caller at the dashboard connect flow when a credential is missing", async () => {
+    const graph = ingestOpenApi(OAUTH_SPEC, "proj", "src-test");
+    const manifest = generateManifest(
+      graph,
+      { operationIds: ["listThings"], taskFlowIds: [] },
+      { serverName: "things", baseUrls: { default: "http://127.0.0.1:59999" } },
+    );
+    const tool = manifest.tools[0]!;
+
+    const failure = await executePlan(manifest, tool, {}, () => undefined).then(
+      () => {
+        throw new Error("expected executePlan to reject");
+      },
+      (error: unknown) => (error instanceof Error ? error.message : String(error)),
+    );
+    expect(failure).toContain('Credential "env:PF_CRED_LOGIN" is not configured');
+    // the agent (and the human reading its transcript) must learn where to fix it
+    expect(failure).toContain('project "proj"');
+    expect(failure).toMatch(/dashboard.*Credentials/i);
+  });
+
   it("redacts query-string credentials in the upstream call record", async () => {
     const server = createServer((_req, res) => {
       res.setHeader("Content-Type", "application/json");

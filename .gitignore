@@ -18,3 +18,8 @@ coverage/
 .playwright-mcp/
 theme-*.png
 shot-*.png
+
+# local quickstart/demo scratch outputs (graph + manifest run artifacts)
+/graph*.json
+/manifest*.json
+.gemini/
