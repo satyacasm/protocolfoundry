@@ -64,12 +64,15 @@ function applyAuth(
   secret: string,
   headers: Record<string, string>,
   query: URLSearchParams,
+  secretQueryParams: string[],
 ): void {
   switch (scheme.kind) {
     case "apiKey": {
       const name = scheme.detail?.["name"] ?? "Authorization";
-      if ((scheme.detail?.["in"] ?? "header") === "query") query.set(name, secret);
-      else headers[name] = secret;
+      if ((scheme.detail?.["in"] ?? "header") === "query") {
+        query.set(name, secret);
+        secretQueryParams.push(name);
+      } else headers[name] = secret;
       break;
     }
     case "bearer":
@@ -90,7 +93,7 @@ async function buildRequest(
   op: UpstreamOperation,
   boundArgs: Record<string, unknown>,
   resolveCredential: CredentialResolver,
-): Promise<{ url: string; init: RequestInit }> {
+): Promise<{ url: string; loggableUrl: string; init: RequestInit }> {
   const baseUrl = manifest.baseUrls[op.baseUrlRef];
   if (!baseUrl) throw new Error(`Manifest has no base URL for ref "${op.baseUrlRef}"`);
 
@@ -127,6 +130,7 @@ async function buildRequest(
     throw new Error(`Missing required path parameter ${unresolved[0]} for ${op.pathTemplate}`);
   }
 
+  const secretQueryParams: string[] = [];
   for (const authId of op.authRequirementIds) {
     const scheme = manifest.authSchemes[authId];
     if (!scheme) throw new Error(`Manifest has no auth scheme "${authId}"`);
@@ -138,18 +142,25 @@ async function buildRequest(
         `Credential "${binding.vaultCredentialId}" is not configured on the gateway`,
       );
     }
-    applyAuth(scheme, secret, headers, query);
+    applyAuth(scheme, secret, headers, query, secretQueryParams);
   }
 
+  const base = `${baseUrl.replace(/\/+$/, "")}${path}`;
   const queryString = query.size > 0 ? `?${query.toString()}` : "";
-  const url = `${baseUrl.replace(/\/+$/, "")}${path}${queryString}`;
+  const url = `${base}${queryString}`;
+
+  // Credentials must never enter logs or error messages (security model):
+  // redact auth-carrying query params from the URL used for reporting.
+  const loggableQuery = new URLSearchParams(query);
+  for (const name of secretQueryParams) loggableQuery.set(name, "***");
+  const loggableUrl = loggableQuery.size > 0 ? `${base}?${loggableQuery.toString()}` : base;
 
   const init: RequestInit = { method: op.method, headers };
   if (body !== undefined && hasBody) {
     headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(body);
   }
-  return { url, init };
+  return { url, loggableUrl, init };
 }
 
 /**
@@ -206,19 +217,22 @@ export async function executePlan(
       boundArgs[name] = resolveBinding(expr, { args, steps });
     }
 
-    const { url, init } = await buildRequest(manifest, op, boundArgs, resolveCredential);
+    const { url, loggableUrl, init } = await buildRequest(manifest, op, boundArgs, resolveCredential);
     const startedAt = Date.now();
     let response: Response;
     try {
       response = await fetch(url, init);
     } catch (error) {
-      throw new Error(`Upstream ${op.method} ${url} unreachable: ${describeFetchFailure(error)}`);
+      // Query string omitted entirely: it may carry credentials (apiKey in query).
+      throw new Error(
+        `Upstream ${op.method} ${url.split("?")[0]} unreachable: ${describeFetchFailure(error)}`,
+      );
     }
     const text = await response.text();
     upstreamCalls.push({
       operationId: call.operationId,
       method: op.method,
-      url,
+      url: loggableUrl,
       status: response.status,
       durationMs: Date.now() - startedAt,
     });
