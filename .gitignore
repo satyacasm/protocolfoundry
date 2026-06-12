@@ -23,3 +23,11 @@ shot-*.png
 /graph*.json
 /manifest*.json
 .gemini/
+
+# encrypted credential vault + any local audit logs (never commit secrets)
+vault.json
+demo/**/vault.json
+demo/**/audit.log.jsonl
+
+# local recorder/TTS tooling (ffmpeg-static, piper binary + voice model — large)
+demo/recorder/

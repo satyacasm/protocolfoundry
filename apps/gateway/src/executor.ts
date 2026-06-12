@@ -36,6 +36,18 @@ interface BindingContext {
   steps: Array<{ output: unknown }>;
 }
 
+/**
+ * Tokenize an access path into keys, expanding array indices so both dot and
+ * bracket notation work: `results[0].id` -> ["results", "0", "id"]. Curated
+ * composed plans routinely reference the first search hit as `…results[0].id`.
+ */
+function parsePath(path: string): string[] {
+  return path
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".")
+    .filter((segment) => segment.length > 0);
+}
+
 function getPath(value: unknown, path: string[]): unknown {
   let current = value;
   for (const key of path) {
@@ -45,15 +57,15 @@ function getPath(value: unknown, path: string[]): unknown {
   return current;
 }
 
-/** Resolve a binding expression: `$args.x.y`, `$steps[0].output.z`, or a literal. */
+/** Resolve a binding expression: `$args.x.y`, `$steps[0].output.z[0].w`, or a literal. */
 export function resolveBinding(expr: string, ctx: BindingContext): unknown {
   if (expr === "$args") return ctx.args;
-  if (expr.startsWith("$args.")) return getPath(ctx.args, expr.slice(6).split("."));
+  if (expr.startsWith("$args.")) return getPath(ctx.args, parsePath(expr.slice(6)));
   const stepMatch = /^\$steps\[(\d+)\]\.output(?:\.(.+))?$/.exec(expr);
   if (stepMatch) {
     const step = ctx.steps[Number(stepMatch[1])];
     if (!step) throw new Error(`Binding "${expr}" references a step that has not run`);
-    return stepMatch[2] ? getPath(step.output, stepMatch[2].split(".")) : step.output;
+    return stepMatch[2] ? getPath(step.output, parsePath(stepMatch[2])) : step.output;
   }
   if (expr.startsWith("$")) throw new Error(`Unsupported binding expression "${expr}"`);
   return expr; // literal

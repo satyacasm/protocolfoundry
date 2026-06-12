@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
 import { ingestOpenApi } from "@protocolfoundry/discovery";
 import { generateManifest } from "@protocolfoundry/generator";
-import { executePlan } from "../src/executor.js";
+import { executePlan, resolveBinding } from "../src/executor.js";
 
 const SPEC = JSON.stringify({
   openapi: "3.0.0",
@@ -45,6 +45,33 @@ const QUERY_KEY_SPEC = JSON.stringify({
       get: { operationId: "listThings", summary: "List things", responses: { "200": { description: "ok" } } },
     },
   },
+});
+
+describe("resolveBinding", () => {
+  const ctx = {
+    args: { movie_title: "Fight Club", year: "1999" },
+    steps: [
+      { output: { page: 1, results: [{ id: 550, title: "Fight Club" }, { id: 551 }] } },
+    ],
+  };
+
+  it("resolves $args paths", () => {
+    expect(resolveBinding("$args.movie_title", ctx)).toBe("Fight Club");
+  });
+
+  it("resolves $steps object paths", () => {
+    expect(resolveBinding("$steps[0].output.page", ctx)).toBe(1);
+  });
+
+  it("resolves array-index paths (the first search hit) in step output", () => {
+    // composed task-level tools commonly chain "search -> use results[0].id"
+    expect(resolveBinding("$steps[0].output.results[0].id", ctx)).toBe(550);
+    expect(resolveBinding("$steps[0].output.results[1].id", ctx)).toBe(551);
+  });
+
+  it("returns a non-$ expression as a literal", () => {
+    expect(resolveBinding("en-US", ctx)).toBe("en-US");
+  });
 });
 
 describe("executePlan network failures", () => {
