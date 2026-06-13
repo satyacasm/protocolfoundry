@@ -67,7 +67,7 @@ function mergeResponse(bag: Record<string, string>, json: unknown): Record<strin
 export async function exchange(input: ExchangeInput): Promise<SealedSecret[]> {
   const { config, appCreds, redirectUri, callbackParams, expectedState, codeVerifier, fetch: fetchImpl } = input;
 
-  if (callbackParams.state !== expectedState) {
+  if (!expectedState || callbackParams.state !== expectedState) {
     throw new Error("OAuth state mismatch — refusing to exchange (possible CSRF)");
   }
   const token = callbackParams[config.params.callbackParam];
@@ -110,10 +110,15 @@ export async function exchange(input: ExchangeInput): Promise<SealedSecret[]> {
     throw new Error(`Token exchange failed for connector "${config.id}": HTTP ${res.status}`);
   }
   const json: unknown = await res.json();
-  const finalBag = mergeResponse(derived, json);
+  // Keep the response in its own namespace so a provider response can never
+  // overwrite an app credential or derived value when resolving `produces`.
+  const responseFields = mergeResponse({}, json);
 
-  return config.produces.map((p) => ({
-    vaultRowId: p.vaultRowId,
-    secret: resolveValue(finalBag, p.from),
-  }));
+  return config.produces.map((p) => {
+    const secret = responseFields[p.from] ?? derived[p.from];
+    if (secret === undefined) {
+      throw new Error(`Connector "${config.id}" produced no value for "${p.from}"`);
+    }
+    return { vaultRowId: p.vaultRowId, secret };
+  });
 }

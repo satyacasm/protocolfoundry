@@ -33,7 +33,7 @@ export type ExchangeStep = z.infer<typeof ExchangeStep>;
 
 /** A custom token-exchange request (only needed for non-standard providers). */
 export const ExchangeRequest = z.object({
-  method: z.enum(["GET", "POST"]).default("POST"),
+  method: z.literal("POST").default("POST"),
   /** Which resolved endpoint to call. Only the token endpoint for now. */
   urlRef: z.literal("token").default("token"),
   /** Form-body fields: field name -> value-bag key. */

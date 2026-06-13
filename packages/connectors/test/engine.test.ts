@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { ConnectorConfig } from "@protocolfoundry/core";
-import { buildLoginUrl } from "../src/engine.js";
+import { buildLoginUrl, exchange } from "../src/engine.js";
 import { clearDiscoveryCache } from "../src/discovery.js";
-import { exchange } from "../src/engine.js";
 
 function fakeFetch(body: unknown): typeof fetch {
   return vi.fn(async () =>
@@ -46,6 +45,7 @@ describe("buildLoginUrl", () => {
   });
 
   it("builds a Kite login URL (explicit endpoint, api_key, no PKCE)", async () => {
+    clearDiscoveryCache();
     const cfg = ConnectorConfig.parse({
       id: "zerodha-kite",
       authorizeUrl: "https://kite.zerodha.com/connect/login",
@@ -90,6 +90,25 @@ describe("exchange", () => {
         callbackParams: { code: "abc", state: "WRONG" },
         expectedState: "RIGHT",
         fetch: fakeTokenFetch({}, {}),
+      }),
+    ).rejects.toThrow(/state/i);
+  });
+
+  it("rejects a callback that arrives with no state param at all", async () => {
+    const cfg = ConnectorConfig.parse({
+      id: "oauth2-generic",
+      authorizeUrl: "https://a.example.com/authorize",
+      tokenUrl: "https://a.example.com/token",
+      produces: [{ vaultRowId: "T", from: "access_token" }],
+    });
+    await expect(
+      exchange({
+        config: cfg,
+        appCreds: { client_id: "c" },
+        redirectUri: "https://app/cb",
+        callbackParams: { code: "abc" },
+        expectedState: "RIGHT",
+        fetch: (() => { throw new Error("fetch should not be called"); }) as unknown as typeof fetch,
       }),
     ).rejects.toThrow(/state/i);
   });
