@@ -10,7 +10,7 @@ import { z } from "zod";
 export const ConnectorAppCredential = z.object({
   id: z.string(),
   label: z.string(),
-  valueFormat: z.string(),
+  valueFormat: z.string().min(1),
 });
 export type ConnectorAppCredential = z.infer<typeof ConnectorAppCredential>;
 
@@ -62,7 +62,7 @@ export const ConnectorConfig = z
     /** Expiry/rotation note surfaced to operators, e.g. "expires daily". */
     rotation: z.string().optional(),
   })
-  .refine((c) => Boolean(c.discovery) || Boolean(c.authorizeUrl), {
-    message: "connector needs discovery.issuer or an explicit authorizeUrl",
+  .refine((c) => Boolean(c.discovery) || (Boolean(c.authorizeUrl) && Boolean(c.tokenUrl)), {
+    message: "connector needs discovery.issuer or both an explicit authorizeUrl AND tokenUrl",
   });
 export type ConnectorConfig = z.infer<typeof ConnectorConfig>;

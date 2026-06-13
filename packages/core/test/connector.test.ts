@@ -52,6 +52,16 @@ describe("ConnectorConfig", () => {
     ).toThrow(/discovery.*or.*authorizeUrl/i);
   });
 
+  it("rejects an explicit-endpoint connector that is missing tokenUrl", () => {
+    expect(() =>
+      ConnectorConfig.parse({
+        id: "half-configured",
+        authorizeUrl: "https://provider.example.com/authorize",
+        produces: [{ vaultRowId: "X", from: "access_token" }],
+      }),
+    ).toThrow(/authorizeUrl AND tokenUrl/i);
+  });
+
   it("old manifests with no connectorConfigs parse to an empty map", () => {
     const m = McpServerManifest.parse({
       manifestVersion: 1,
