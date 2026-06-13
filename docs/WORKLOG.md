@@ -7,6 +7,34 @@ honest and terse.
 
 ---
 
+## 2026-06-13 — Session 22: prod setup docs + customer bundle credentials
+
+### Done
+
+- **Diagnosed prod** (`protocolfoundry-web.onrender.com`, logged in): all pages
+  link and render (overview, project, release detail, Forge, audit). Root cause
+  of the failing `zerodha-api-docs` eval (16% completion): **`PF_VAULT_KEY` is
+  not set** on the web service → "Vault unavailable" → the Credentials connect
+  form is disabled → no upstream token → every tool call unauthenticated.
+- **Deployment doc** (`docs/guides/deployment.md`): spelled out that
+  `PF_VAULT_KEY` is **required** for credential onboarding (with the exact
+  "Vault unavailable" failure mode), that `ANTHROPIC_API_KEY` must be a real
+  key, added an env-var table, and a "Connecting credentials & running evals"
+  section (the eval form is now on live releases too — Session 21).
+- **Customer connection bundle** (`apps/web/src/lib/bundle.ts`): added an
+  **Upstream credentials** section to the README — lists each binding with its
+  auth kind and guide title, and states secrets are operator-connected in the
+  dashboard and vaulted, never in the bundle (ADR-0011). Test covers it.
+- Generated a real TMDB bundle (`demo/build-bundle.mts` → prod gateway URL) to
+  verify: 29 tools, composed tools flagged, eval report, the new creds section.
+
+### Open questions / next steps
+
+- User to set `PF_VAULT_KEY` in Render's `pf-shared` group, then connect the
+  upstream credential and re-run the eval on the live release.
+
+---
+
 ## 2026-06-13 — Session 21: eval re-run on live releases + glossary widget
 
 ### Done

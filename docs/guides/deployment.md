@@ -18,15 +18,51 @@ The active blueprint is 100% free tier — no payment info needed:
 
 1. Render dashboard → **New → Blueprint** → `satyacasm/protocolfoundry`,
    branch `main`.
-2. Fill the prompted secrets: `PF_VAULT_KEY` (`openssl rand -base64 32`),
-   `PF_DASHBOARD_PASSWORD` (your login), `ANTHROPIC_API_KEY` (placeholder is
-   fine until you run curation/evals).
+2. Fill the prompted secrets (all live in the shared `pf-shared` env group or
+   on the web service — see the table below):
+   - **`PF_VAULT_KEY`** — `openssl rand -base64 32` (or `pf keygen`). **Required
+     for credential onboarding.** Without it the dashboard shows _"Vault
+     unavailable"_, the **Connect** form on every project is disabled, and no
+     upstream credential can be attached — so evals against any authenticated
+     API fail (every tool call is unauthenticated). Don't skip it.
+   - **`PF_DASHBOARD_PASSWORD`** — your operator login (omit ⇒ open mode, writes
+     disabled).
+   - **`ANTHROPIC_API_KEY`** — a **real** key to run curation or evals. A
+     placeholder only works if you never click those buttons; the eval/curate
+     calls fail at runtime with an auth error otherwise.
 3. Done. Gateway health: `GET /healthz`; dashboard: log in at `/login`.
 
 Free-tier caveats: services sleep after ~15 min idle (first hit is slow);
 the free Postgres expires after 30 days (recreate or upgrade); no disk, so
 in-flight Forge work resets on deploy (promoted releases are safe in
 Postgres).
+
+### Required env vars at a glance
+
+| Var | Where | Set by | Purpose |
+| --- | --- | --- | --- |
+| `PF_VAULT_KEY` | `pf-shared` group (gateway + web) | you (`sync:false`) | seal/decrypt upstream credentials — **same value on both services** |
+| `PF_DASHBOARD_PASSWORD` | web | you (`sync:false`) | operator login |
+| `ANTHROPIC_API_KEY` | web | you (`sync:false`) | curation + eval agent models (real key) |
+| `PF_GATEWAY_TOKEN_SECRET` | `pf-shared` group | Render (auto) | mint/verify agent tokens |
+| `PF_DASHBOARD_SECRET` | web | Render (auto) | dashboard session cookie |
+| `PF_DATABASE_URL` | both | Render (from DB) | release store + vault rows |
+
+### Connecting credentials & running evals (ADR-0011)
+
+Once `PF_VAULT_KEY` is set on both services:
+
+1. Open a project → **Credentials** panel → paste the upstream token. It's
+   sealed straight into the vault and picked up by the gateway immediately —
+   **no restart, no redeploy**. Secrets never enter manifests, logs, or prompts.
+2. Upload (or **Generate**) an eval suite for the project.
+3. Hit **Run eval** / **Re-run eval** with the model picker. The eval form now
+   appears on **live** releases too (not only staged), so a promoted server can
+   be re-graded — e.g. after connecting a credential or trying a stronger model.
+
+If an eval scores near zero against an authenticated API, the credential almost
+certainly isn't connected (check the Credentials panel reads _"connected"_, and
+that `PF_VAULT_KEY` is set).
 
 ## Full mode: dev + prod (`render.paid.yaml`, requires payment info)
 

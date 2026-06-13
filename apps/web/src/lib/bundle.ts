@@ -24,6 +24,23 @@ function readme(release: Release, manifest: McpServerManifest, evalRun: EvalRun 
     )
     .join("\n");
 
+  const credBlock =
+    manifest.credentialBindings.length === 0
+      ? "This server needs **no upstream credentials**."
+      : `This server reaches its upstream API with ${manifest.credentialBindings.length} ` +
+        `credential(s), connected by an operator in the ProtocolFoundry dashboard ` +
+        `(Project → **Credentials**) and sealed in the vault — **never** in this bundle, ` +
+        `in prompts, or in logs (ADR-0011). What it needs:\n\n` +
+        manifest.credentialBindings
+          .map((b) => {
+            const scheme = manifest.authSchemes[b.authRequirementId];
+            const guide = manifest.credentialGuides[b.authRequirementId];
+            return `- \`${b.vaultCredentialId}\` (${scheme?.kind ?? "unknown"})${
+              guide ? ` — ${guide.title}; setup steps are shown on the Credentials panel` : ""
+            }`;
+          })
+          .join("\n");
+
   return `# ${manifest.serverName} — MCP connection bundle
 
 Release **v${release.version}** (${release.status}) · ${manifest.projectId} · generated ${new Date().toISOString()}
@@ -50,6 +67,10 @@ pf token issue --server ${manifest.serverName} --scopes ${scopes.join(",") || "r
 Narrow the scopes to what the agent actually needs — the gateway enforces
 them per tool call. Then send \`Authorization: Bearer <token>\` (the client
 configs in \`clients/\` show where it goes).
+
+## Upstream credentials
+
+${credBlock}
 
 ## Tools (${manifest.tools.length})
 

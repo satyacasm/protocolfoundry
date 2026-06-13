@@ -66,6 +66,8 @@ describe("buildConnectionBundle", () => {
     expect(readme).toContain("pf token issue --server demo --scopes read,write");
     expect(readme).toContain("without** an eval run");
     expect(readme).toContain("per-call approval");
+    expect(readme).toContain("## Upstream credentials");
+    expect(readme).toContain("no upstream credentials"); // demo manifest has none
 
     const claudeCode = JSON.parse(await zip.file("clients/claude-code.mcp.json")!.async("text"));
     expect(claudeCode.mcpServers.demo.type).toBe("http");
