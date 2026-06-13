@@ -12,10 +12,14 @@ honest and terse.
 ### Done
 
 - **Diagnosed prod** (`protocolfoundry-web.onrender.com`, logged in): all pages
-  link and render (overview, project, release detail, Forge, audit). Root cause
-  of the failing `zerodha-api-docs` eval (16% completion): **`PF_VAULT_KEY` is
-  not set** on the web service → "Vault unavailable" → the Credentials connect
-  form is disabled → no upstream token → every tool call unauthenticated.
+  link and render (overview, project, release detail, Forge, audit).
+  - _Correction:_ an earlier read showed "Vault unavailable" — but that was a
+    **stale pre-redeploy build**. `PF_VAULT_KEY` *was* set; after the redeploy
+    the vault is available and the Credentials **Connect** form works.
+  - The `zerodha-api-docs` eval is re-runnable on its live release now, but the
+    button is disabled because the project has **no eval suite** yet (and the
+    Kite credential isn't connected — needed for a non-zero score). To re-run:
+    Generate/upload a suite → connect the Kite token → Re-run eval.
 - **Deployment doc** (`docs/guides/deployment.md`): spelled out that
   `PF_VAULT_KEY` is **required** for credential onboarding (with the exact
   "Vault unavailable" failure mode), that `ANTHROPIC_API_KEY` must be a real
