@@ -32,13 +32,10 @@ function EvalJobChip({ job, running }: { job: EvalJob; running: boolean }) {
 
 export default async function ProjectPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
 }) {
   const { projectId } = await params;
-  const { notice, error } = await searchParams;
   const releases = await store.list(projectId);
   if (releases.length === 0) notFound();
 
@@ -83,8 +80,6 @@ export default async function ProjectPage({
           : "No live release. Promote a staged release to put this server on the floor."}
       </p>
 
-      {notice ? <p className="flash ok-flash">{notice}</p> : null}
-      {error ? <p className="flash bad-flash">{error}</p> : null}
       {!writesEnabled ? (
         <p className="flash dim-flash">
           Read-only: set PF_DASHBOARD_PASSWORD to enable promote / rollback from here.
@@ -167,6 +162,31 @@ export default async function ProjectPage({
                   ) : null}
                   <span className="when">{formatWhen(release.createdAt)}</span>
                 </div>
+                {jobActive && job ? (
+                  <div
+                    className="eval-progress"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={job.totalTasks}
+                    aria-valuenow={job.completedTasks}
+                  >
+                    <div className="eval-progress-track">
+                      <div
+                        className="eval-progress-fill"
+                        style={{
+                          width: `${
+                            job.totalTasks
+                              ? Math.round((job.completedTasks / job.totalTasks) * 100)
+                              : 5
+                          }%`,
+                        }}
+                      />
+                    </div>
+                    <span className="eval-progress-label">
+                      running eval · {job.completedTasks}/{job.totalTasks} tasks
+                    </span>
+                  </div>
+                ) : null}
                 {evalRun ? (
                   <div className="gauges">
                     <Gauge label="completion" value={evalRun.taskCompletionRate} />

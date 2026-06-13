@@ -167,11 +167,24 @@ describe("dashboard eval jobs", () => {
     expect((completed["detail"] as Record<string, unknown>)["taskCompletionRate"]).toBe(1);
   });
 
-  it("records a failed job when the release cannot host (and clears the lock)", async () => {
-    // live releases are sealed — attach fails after promote, job ends failed
+  it("runs an eval on a live (promoted) release too, attaching the new run", async () => {
+    // a promoted server can be re-graded — eval is no longer staged-only
     await store.promote("taskboard", 1);
-    await expect(
-      startEvalJob({ store, audit, projectId: "taskboard", version: 1, actorId: "operator" }),
-    ).rejects.toThrow(/staged releases/);
+    const { job, run } = await startEvalJob({
+      store,
+      audit,
+      projectId: "taskboard",
+      version: 1,
+      actorId: "operator",
+      agent: createScriptedAgent(),
+    });
+    expect(job.status).toBe("running");
+    await run();
+
+    const finished = await readEvalJob("taskboard", 1);
+    expect(finished!.status).toBe("succeeded");
+    const live = (await store.list("taskboard")).find((r) => r.version === 1);
+    expect(live!.status).toBe("live");
+    expect(live!.evalRunId).toBe(finished!.evalRunId);
   });
 });

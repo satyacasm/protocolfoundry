@@ -235,9 +235,9 @@ export class PgReleaseStore implements ReleaseStore {
       );
       const target = rows[0];
       if (!target) throw new Error(`No release v${version} for project "${projectId}"`);
-      if (target["status"] !== "staged") {
+      if (target["status"] !== "staged" && target["status"] !== "live") {
         throw new Error(
-          `Release v${version} is "${target["status"]}" — evals attach to staged releases only`,
+          `Release v${version} is "${target["status"]}" — evals attach to staged or live releases`,
         );
       }
       await client.query(

@@ -114,8 +114,10 @@ export async function startEvalJob(
   }
   const release = (await store.list(projectId)).find((r) => r.version === version);
   if (!release) throw new Error(`No release v${version} for project "${projectId}"`);
-  if (release.status !== "staged") {
-    throw new Error(`Release v${version} is "${release.status}" — evals run on staged releases`);
+  if (release.status !== "staged" && release.status !== "live") {
+    throw new Error(
+      `Release v${version} is "${release.status}" — evals run on staged or live releases`,
+    );
   }
   const manifest = await store.getManifest(projectId, version);
   const agent = deps.agent ?? createAnthropicAgent(deps.model);

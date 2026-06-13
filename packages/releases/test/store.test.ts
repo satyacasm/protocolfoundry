@@ -96,7 +96,7 @@ describe("FileReleaseStore", () => {
     await expect(store.promote("taskboard", 2)).rejects.toThrow(/only staged/);
   });
 
-  it("attaches eval runs to staged releases only, replacing earlier runs", async () => {
+  it("attaches eval runs to staged and live releases, replacing earlier runs", async () => {
     const store = new FileReleaseStore(join(rootDir, "attach"));
     const v1 = await store.createRelease(manifest); // forge path: no eval yet
     expect(v1.evalRunId).toBeUndefined();
@@ -112,11 +112,12 @@ describe("FileReleaseStore", () => {
     expect((await store.getEvalRun("taskboard", 1))!.id).toBe(second.id);
     expect((await store.list("taskboard"))[0]!.evalRunId).toBe(second.id);
 
-    // live releases are sealed history
+    // a promoted (live) release can be re-graded — eval re-runs attach too
     await store.promote("taskboard", 1);
-    await expect(store.attachEvalRun("taskboard", 1, evalRun(1, 1))).rejects.toThrow(
-      /staged releases only/,
-    );
+    const third = evalRun(1, 1);
+    await store.attachEvalRun("taskboard", 1, third);
+    expect((await store.getEvalRun("taskboard", 1))!.id).toBe(third.id);
+
     await expect(store.attachEvalRun("taskboard", 9, evalRun(1, 1))).rejects.toThrow(
       /No release v9/,
     );

@@ -26,7 +26,7 @@ export default async function ReleasePage({
       <h1>
         {projectId} · v{release.version}
       </h1>
-      <p style={{ display: "flex", gap: 10, alignItems: "center", margin: "0 0 36px" }}>
+      <p style={{ display: "flex", gap: 10, alignItems: "center", margin: "0 0 36px", flexWrap: "wrap" }}>
         <StatusBadge status={release.status} />
         <span className="chip">created {formatWhen(release.createdAt)}</span>
         {release.approvedBy ? (
@@ -75,6 +75,7 @@ export default async function ReleasePage({
 
       <section className="section">
         <SectionHead no="02" title="Tool surface" meta="what agents see" />
+        <div className="table-scroll">
         <table className="grid">
           <thead>
             <tr>
@@ -107,6 +108,7 @@ export default async function ReleasePage({
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       <section className="section">
@@ -129,6 +131,7 @@ export default async function ReleasePage({
               </div>
             </div>
             {evalRun.results.length > 0 ? (
+              <div className="table-scroll">
               <table className="grid">
                 <thead>
                   <tr>
@@ -155,6 +158,7 @@ export default async function ReleasePage({
                   ))}
                 </tbody>
               </table>
+              </div>
             ) : null}
           </>
         )}

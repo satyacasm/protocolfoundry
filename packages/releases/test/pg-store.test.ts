@@ -92,7 +92,7 @@ describe("PgReleaseStore", () => {
     expect(await store.listProjects()).toEqual(["taskboard"]);
   });
 
-  it("attaches eval runs to staged releases only, replacing earlier runs", async () => {
+  it("attaches eval runs to staged and live releases, replacing earlier runs", async () => {
     const store = freshStore();
     await store.createRelease(manifest); // forge path: no eval yet
 
@@ -106,10 +106,11 @@ describe("PgReleaseStore", () => {
     expect((await store.getEvalRun("taskboard", 1))!.id).toBe(second.id);
     expect((await store.list("taskboard"))[0]!.evalRunId).toBe(second.id);
 
+    // re-grading a promoted (live) release attaches the new run too
     await store.promote("taskboard", 1);
-    await expect(store.attachEvalRun("taskboard", 1, evalRun(1, 1))).rejects.toThrow(
-      /staged releases only/,
-    );
+    const third = evalRun(1, 1);
+    await store.attachEvalRun("taskboard", 1, third);
+    expect((await store.getEvalRun("taskboard", 1))!.id).toBe(third.id);
   });
 
   it("works as a gateway ManifestSource with hot promote/rollback", async () => {

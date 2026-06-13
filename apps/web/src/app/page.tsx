@@ -4,6 +4,7 @@ import { formatWhen, Gauge, SectionHead, StatusBadge } from "@/components/ui";
 import { Parallax, Reveal } from "@/components/scrollfx";
 import { Faq } from "@/components/faq";
 import { FoundryPrism, Tilt } from "@/components/foundry3d";
+import { CliDemo } from "@/components/cli-demo";
 
 export const dynamic = "force-dynamic";
 
@@ -78,10 +79,23 @@ export default async function OverviewPage() {
         </div>
       </Reveal>
 
+      <section className="section cli-section">
+        <Reveal>
+          <SectionHead no="01" title="From your API to every agent" meta="one CLI, a few commands" />
+        </Reveal>
+        <Reveal delay={80}>
+          <p className="lede cli-lede">
+            Point <code>pf</code> at a sample app&apos;s docs and it comes out a hosted, eval‑tested
+            MCP server — then register it with Claude, Gemini, or Codex in one line.
+          </p>
+          <CliDemo />
+        </Reveal>
+      </section>
+
       <section className="section faq-section">
         <span className="faq-bg" aria-hidden="true" />
         <Reveal>
-          <SectionHead no="01" title="What is this place?" meta="six answers, no tour required" />
+          <SectionHead no="02" title="What is this place?" meta="six answers, no tour required" />
         </Reveal>
         <Reveal delay={80}>
           <Faq />
@@ -90,7 +104,7 @@ export default async function OverviewPage() {
 
       <section className="section">
         <Reveal>
-          <SectionHead no="02" title="Projects" meta={releasesDir} />
+          <SectionHead no="03" title="Projects" meta={releasesDir} />
         </Reveal>
         {projects.length === 0 ? (
           <Reveal>
@@ -143,7 +157,7 @@ export default async function OverviewPage() {
       <section className="section activity-section">
         <span className="activity-bg" aria-hidden="true" />
         <Reveal>
-          <SectionHead no="03" title="Recent activity" meta="audit log, newest first" />
+          <SectionHead no="04" title="Recent activity" meta="audit log, newest first" />
         </Reveal>
         {recentAudit.length === 0 ? (
           <Reveal>
@@ -151,6 +165,7 @@ export default async function OverviewPage() {
           </Reveal>
         ) : (
           <Reveal delay={80}>
+            <div className="table-scroll">
             <table className="grid">
               <thead>
                 <tr>
@@ -188,6 +203,7 @@ export default async function OverviewPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </Reveal>
         )}
       </section>

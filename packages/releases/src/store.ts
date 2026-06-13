@@ -198,9 +198,9 @@ export class FileReleaseStore implements ReleaseStore {
     const index = await this.readIndex(projectId);
     const target = index.releases.find((r) => r.version === version);
     if (!target) throw new Error(`No release v${version} for project "${projectId}"`);
-    if (target.status !== "staged") {
+    if (target.status !== "staged" && target.status !== "live") {
       throw new Error(
-        `Release v${version} is "${target.status}" — evals attach to staged releases only`,
+        `Release v${version} is "${target.status}" — evals attach to staged or live releases`,
       );
     }
     await writeFile(

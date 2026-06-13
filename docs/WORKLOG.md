@@ -1,5 +1,38 @@
 # Worklog
 
+<!-- newest entry goes directly below this line -->
+## 2026-06-13 — Session 23: eval feedback + mobile responsive + homepage CLI demo
+
+### Done
+
+- **Eval-on-live, fully wired**: clicking Run eval on a live release silently
+  failed because `startEvalJob` *and* `attachEvalRun` (file + pg stores) still
+  rejected non-staged releases — only the button had been freed (Session 21).
+  Relaxed all three to allow staged **or** live, so a promoted server can be
+  re-graded; tests updated to assert the new behavior (103 pass).
+- **Feedback so the user isn't in the dark**:
+  - Global **toast** (`components/toast.tsx`, mounted in layout) surfaces
+    `?notice`/`?error` from server actions as a fixed, auto-dismissing overlay
+    and strips the param — visible regardless of scroll. Removed the easy-to-
+    miss top-of-page flash on the project page.
+  - **Eval progress bar** on the running release (completed/total tasks, polled
+    by the existing 3 s AutoRefresh).
+- **Mobile responsive fixes** (verified at 390 px): masthead nav fits / scrolls
+  instead of overflowing; data tables wrapped in `.table-scroll` (horizontal
+  scroll) + smaller type; release-detail action buttons ("connection bundle",
+  "public report") wrap instead of overflowing; release-row controls wrap.
+- **Homepage CLI demo** (`components/cli-demo.tsx`): a looping animated terminal
+  showing `pf ingest → curate → release` then `claude / gemini / codex mcp add`
+  → "available to your agents". New overview section 01 (others renumbered).
+
+### Open questions / next steps
+
+- Deploys via `main` → Render. To re-run a prod eval: connect the upstream
+  credential + upload a suite, then Re-run eval on the live release.
+
+---
+
+
 Running log of project workflow — one entry per working session, newest first.
 Each entry: what was done, decisions made, open questions, next steps.
 This file is the "documenting the workflow as we move forward" artifact; keep it
