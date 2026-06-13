@@ -1,6 +1,17 @@
 # Worklog
 
 <!-- newest entry goes directly below this line -->
+## 2026-06-13 — SP1: connector engine core
+
+- Added `@protocolfoundry/connectors` (engine, OIDC discovery, safe transform
+  vocabulary) + declarative `ConnectorConfig` in core (ADR-0012).
+- Captures only sanctioned redirect handoffs; standard OAuth2/OIDC needs no
+  per-provider code, Kite expressed via declarative derive+exchange config.
+- Output is `SealedSecret[]` for callers to seal — gateway resolution unchanged.
+- Next: SP2 (LLM config derivation + global model switch), SP3 (connect/rotation
+  surfaces), SP4 (unsupported-API intake).
+
+---
 ## 2026-06-13 — Session 24: eval-button feedback + reliable toast + audit mobile
 
 ### Done

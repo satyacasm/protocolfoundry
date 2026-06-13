@@ -91,6 +91,10 @@ This is the single most important early architecture choice — it is what makes
   SDK). Implemented: OpenAPI, Postman, docs-page URLs (spec autodiscovery →
   LLM extraction fallback, ADR-0010).
 - `packages/generator` — graph → manifest.
+- `packages/connectors` — shared, data-driven connector engine: OAuth2/OIDC
+  authorization-code flow with OIDC discovery and a safe transform vocabulary
+  (`sha256`/`concat`) for non-standard providers; emits `SealedSecret[]` into
+  existing vault rows (ADR-0012).
 - `packages/evals` — agent-loop harness.
 - Postgres (likely Neon/Supabase). Eval runs triggered from the dashboard
   execute as in-process jobs against an ephemeral loopback gateway (ADR-0008);
