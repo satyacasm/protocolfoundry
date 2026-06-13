@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AuthRequirement, JsonSchemaObject } from "./workflow-graph.js";
+import { ConnectorConfig } from "./connector.js";
 
 /**
  * The McpServerManifest is the Generator's output artifact: a declarative,
@@ -109,6 +110,8 @@ export const McpServerManifest = z.object({
   credentialBindings: z.array(CredentialBinding),
   /** Setup walkthroughs keyed by authRequirementId (instructions, never secrets). */
   credentialGuides: z.record(CredentialGuide).default({}),
+  /** Sanctioned-connect configs keyed by authRequirementId (data, never secrets). */
+  connectorConfigs: z.record(ConnectorConfig).default({}),
   /** Graph snapshot this manifest was generated from (provenance). */
   workflowGraphRef: z.string(),
   createdAt: z.string().datetime(),
