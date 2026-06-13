@@ -8,6 +8,7 @@ import { generateSuiteFromManifest, startEval, uploadEvalSuite } from "@/lib/eva
 import { isEvalRunning, readEvalJob, type EvalJob } from "@/lib/eval-jobs";
 import { getEvalSuite } from "@/lib/workspace";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { Toast } from "@/components/toast";
 import { formatWhen, Gauge, SectionHead, StatusBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -32,10 +33,13 @@ function EvalJobChip({ job, running }: { job: EvalJob; running: boolean }) {
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ notice?: string; error?: string }>;
 }) {
   const { projectId } = await params;
+  const { notice, error } = await searchParams;
   const releases = await store.list(projectId);
   if (releases.length === 0) notFound();
 
@@ -69,6 +73,11 @@ export default async function ProjectPage({
   return (
     <main className="reveal">
       {anyJobActive ? <AutoRefresh /> : null}
+      {error ? (
+        <Toast message={error} kind="error" />
+      ) : notice ? (
+        <Toast message={notice} kind="ok" />
+      ) : null}
       <p className="crumbs">
         <Link href="/">overview</Link> / {projectId}
       </p>
@@ -130,20 +139,25 @@ export default async function ProjectPage({
                         <option value="opus">opus</option>
                         <option value="fable">fable</option>
                       </select>
+                      {/* Only disabled while a run is active — otherwise clicking
+                          always gives feedback (a toast) instead of doing nothing. */}
                       <button
                         type="submit"
                         className="action-button"
-                        disabled={!suite || !evalReady || jobActive}
+                        disabled={jobActive}
                         title={
                           !suite
-                            ? "Upload an eval suite below first"
+                            ? "Generate or upload an eval suite below first"
                             : !evalReady
-                              ? "Requires ANTHROPIC_API_KEY on the dashboard server"
+                              ? "Set ANTHROPIC_API_KEY on the dashboard to run evals"
                               : undefined
                         }
                       >
                         {evalRun ? "Re-run eval" : "Run eval"}
                       </button>
+                      {!suite ? (
+                        <span className="eval-hint">needs a suite ↓</span>
+                      ) : null}
                     </form>
                   ) : null}
                   {writesEnabled && release.status === "staged" ? (

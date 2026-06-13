@@ -63,6 +63,7 @@ export default async function AuditPage({
           audit file.
         </div>
       ) : (
+        <div className="table-scroll">
         <table className="grid">
           <thead>
             <tr>
@@ -113,6 +114,7 @@ export default async function AuditPage({
             })}
           </tbody>
         </table>
+        </div>
       )}
       <div className="filters" style={{ marginTop: 20 }}>
         {page > 1 ? <Link href={pageUrl(page - 1)}>← newer</Link> : null}

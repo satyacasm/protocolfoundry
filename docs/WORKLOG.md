@@ -1,6 +1,26 @@
 # Worklog
 
 <!-- newest entry goes directly below this line -->
+## 2026-06-13 — Session 24: eval-button feedback + reliable toast + audit mobile
+
+### Done
+
+- **"Run eval does nothing" — root cause + fix**: the button was silently
+  `disabled` whenever the project had no eval suite, so a click did nothing and
+  showed no reason. Now it's only disabled while a run is active; with no suite
+  it stays clickable, shows a "needs a suite ↓" hint, and a click surfaces the
+  action's error as a toast. (Verified on prod: generated a coverage suite for
+  `razorpay-ifsc` and ran an eval → toast + 100/100.)
+- **Toast made reliable**: the client/`useSearchParams` toast in the root layout
+  never hydrated (rendered server-side, effects never ran — confirmed via
+  instrumentation). Rewrote it as a **pure server component** the page renders
+  from `?notice`/`?error`, auto-fading via CSS (5 s success / 9 s error). No
+  client JS to fail. Removed it from the layout; the project page renders it.
+- **Audit page mobile**: wrapped the table in `.table-scroll`; the filter pills
+  already wrap; masthead nav now scrolls (not overflows) across the whole
+  ≤760 px range. Verified at 390 px.
+
+---
 ## 2026-06-13 — Session 23: eval feedback + mobile responsive + homepage CLI demo
 
 ### Done

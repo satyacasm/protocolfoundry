@@ -1475,9 +1475,23 @@ input[type="file"]::file-selector-button:hover {
   .masthead {
     padding: 0 16px;
   }
+  .masthead {
+    gap: 10px;
+  }
   .masthead nav {
     gap: 16px;
     font-size: 12px;
+    white-space: nowrap;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .masthead nav::-webkit-scrollbar {
+    display: none;
+  }
+  .wordmark {
+    flex: none;
     white-space: nowrap;
   }
   .wordmark .tick {
@@ -1621,11 +1635,18 @@ input[type="file"]::file-selector-button:hover {
   border: 1px solid var(--line-bright);
   box-shadow: var(--shadow-float);
   font-size: 13.5px;
-  animation: toastIn 0.22s ease;
+  /* slide in, then auto-fade (success 5s, error 9s) — pure CSS, no JS to hydrate */
+  animation: toastIn 0.25s ease forwards, toastFade 0.5s ease 5s forwards;
+}
+.toast.toast-error {
+  animation: toastIn 0.25s ease forwards, toastFade 0.5s ease 9s forwards;
 }
 @keyframes toastIn {
   from { opacity: 0; transform: translate(-50%, -10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes toastFade {
+  to { opacity: 0; visibility: hidden; }
 }
 .toast-icon {
   flex: none;
@@ -1654,6 +1675,13 @@ input[type="file"]::file-selector-button:hover {
   padding: 2px 4px;
 }
 .toast-x:hover { color: var(--ink); }
+
+.eval-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--status-staged);
+  white-space: nowrap;
+}
 
 /* ---- Eval progress bar ------------------------------------------------- */
 .eval-progress { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
