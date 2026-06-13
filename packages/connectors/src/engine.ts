@@ -2,6 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import type { ConnectorConfig } from "@protocolfoundry/core";
 import { resolveEndpoints } from "./discovery.js";
 import type { LoginRequest } from "./types.js";
+import { applyDerive, resolveValue } from "./transforms.js";
+import type { ExchangeInput, SealedSecret } from "./types.js";
 
 function base64url(buf: Buffer): string {
   return buf.toString("base64url");
@@ -46,4 +48,72 @@ export async function buildLoginUrl(
     return { url: url.toString(), state, codeVerifier };
   }
   return { url: url.toString(), state };
+}
+
+/** Merge response JSON into the value bag: top-level fields + one level of `data`. */
+function mergeResponse(bag: Record<string, string>, json: unknown): Record<string, string> {
+  const out = { ...bag };
+  if (json && typeof json === "object") {
+    const obj = json as Record<string, unknown>;
+    const nested = obj.data && typeof obj.data === "object" ? (obj.data as Record<string, unknown>) : {};
+    for (const [k, v] of Object.entries({ ...obj, ...nested })) {
+      if (typeof v === "string") out[k] = v;
+    }
+  }
+  return out;
+}
+
+/** Capture the sanctioned redirect, run the token exchange, return secrets to seal. */
+export async function exchange(input: ExchangeInput): Promise<SealedSecret[]> {
+  const { config, appCreds, redirectUri, callbackParams, expectedState, codeVerifier, fetch: fetchImpl } = input;
+
+  if (callbackParams.state !== expectedState) {
+    throw new Error("OAuth state mismatch — refusing to exchange (possible CSRF)");
+  }
+  const token = callbackParams[config.params.callbackParam];
+  if (!token) {
+    throw new Error(`Callback is missing the "${config.params.callbackParam}" parameter`);
+  }
+
+  const endpoints = await resolveEndpoints(config, fetchImpl);
+
+  const seed: Record<string, string> = { ...appCreds, [config.params.callbackParam]: token };
+  const derived = applyDerive(seed, config.derive);
+
+  const body = new URLSearchParams();
+  if (config.exchange) {
+    for (const [field, ref] of Object.entries(config.exchange.body)) {
+      body.set(field, resolveValue(derived, ref));
+    }
+  } else {
+    body.set("grant_type", config.params.grantType);
+    body.set("code", token);
+    body.set("redirect_uri", redirectUri);
+    if (appCreds.client_id) body.set("client_id", appCreds.client_id);
+    if (appCreds.client_secret) body.set("client_secret", appCreds.client_secret);
+    if (codeVerifier) body.set("code_verifier", codeVerifier);
+  }
+
+  const headers: Record<string, string> = { "content-type": "application/x-www-form-urlencoded" };
+  if (config.exchange) {
+    for (const [h, ref] of Object.entries(config.exchange.headers)) {
+      headers[h] = resolveValue(derived, ref);
+    }
+  }
+
+  const res = await fetchImpl(endpoints.tokenUrl, {
+    method: config.exchange?.method ?? "POST",
+    headers,
+    body: body.toString(),
+  });
+  if (!res.ok) {
+    throw new Error(`Token exchange failed for connector "${config.id}": HTTP ${res.status}`);
+  }
+  const json: unknown = await res.json();
+  const finalBag = mergeResponse(derived, json);
+
+  return config.produces.map((p) => ({
+    vaultRowId: p.vaultRowId,
+    secret: resolveValue(finalBag, p.from),
+  }));
 }
