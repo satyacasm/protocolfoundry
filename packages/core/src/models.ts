@@ -34,3 +34,25 @@ export function resolveClaudeModel(model?: string): string {
 export function supportsAdaptiveThinking(model: string): boolean {
   return !/haiku/i.test(model);
 }
+
+/** The LLM boundaries an operator can target with a per-boundary model override. */
+export type ModelBoundary = "curation" | "discovery" | "eval" | "connector";
+
+/**
+ * Resolve the model for an LLM boundary. Precedence (first defined wins):
+ *   1. explicit arg (e.g. CLI --model, eval form field)
+ *   2. per-boundary env  PF_ANTHROPIC_MODEL_<BOUNDARY>  (e.g. ..._CURATION)
+ *   3. global env        PF_ANTHROPIC_MODEL
+ *   4. DEFAULT_CLAUDE_MODEL (haiku)
+ * Aliases and full IDs both resolve via resolveClaudeModel.
+ */
+export function resolveGlobalModel(explicit?: string, boundary?: ModelBoundary): string {
+  if (explicit) return resolveClaudeModel(explicit);
+  if (boundary) {
+    const perBoundary = process.env[`PF_ANTHROPIC_MODEL_${boundary.toUpperCase()}`];
+    if (perBoundary) return resolveClaudeModel(perBoundary);
+  }
+  const global = process.env.PF_ANTHROPIC_MODEL;
+  if (global) return resolveClaudeModel(global);
+  return DEFAULT_CLAUDE_MODEL;
+}
