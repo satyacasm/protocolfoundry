@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @protocolfoundry/core && npm run build -w @protocolfoundry/discovery && npm run build -w @protocolfoundry/generator && npm run build -w @protocolfoundry/curation && npm run build -w @protocolfoundry/evals && npm run build -w @protocolfoundry/releases && npm run build -w @protocolfoundry/audit && npm run build -w @protocolfoundry/vault && npm run build -w @protocolfoundry/gateway && npm run build -w @protocolfoundry/cli",
+    "build": "npm run build -w @protocolfoundry/core && npm run build -w @protocolfoundry/connectors && npm run build -w @protocolfoundry/discovery && npm run build -w @protocolfoundry/generator && npm run build -w @protocolfoundry/curation && npm run build -w @protocolfoundry/evals && npm run build -w @protocolfoundry/releases && npm run build -w @protocolfoundry/audit && npm run build -w @protocolfoundry/vault && npm run build -w @protocolfoundry/gateway && npm run build -w @protocolfoundry/cli",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run build && vitest run",
     "dist": "npm run build && node scripts/bundle.mjs"
