@@ -5,7 +5,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
   EvalRun,
-  resolveClaudeModel,
+  resolveGlobalModel,
   supportsAdaptiveThinking,
   type EvalTaskResult,
 } from "@protocolfoundry/core";
@@ -96,7 +96,7 @@ export function createAnthropicAgent(
   modelOrAlias?: string,
   options: { adaptiveThinking?: boolean } = {},
 ): AgentModel {
-  const model = resolveClaudeModel(modelOrAlias);
+  const model = resolveGlobalModel(modelOrAlias, "eval");
   const client = new Anthropic();
   const adaptive = options.adaptiveThinking ?? supportsAdaptiveThinking(model);
   return {

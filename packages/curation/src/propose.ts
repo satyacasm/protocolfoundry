@@ -5,7 +5,7 @@ import {
   CurationProposal,
   ExposureWarning,
   ToolRefinement,
-  resolveClaudeModel,
+  resolveGlobalModel,
   supportsAdaptiveThinking,
   type WorkflowGraph,
 } from "@protocolfoundry/core";
@@ -164,7 +164,7 @@ export function buildCurationPrompt(graph: WorkflowGraph, operationIds: string[]
  * model ID; defaults to haiku.
  */
 export function createAnthropicCurator(modelOrAlias?: string): Curator {
-  const model = resolveClaudeModel(modelOrAlias);
+  const model = resolveGlobalModel(modelOrAlias, "curation");
   const client = new Anthropic();
   return {
     model,
