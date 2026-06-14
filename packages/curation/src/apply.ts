@@ -132,5 +132,8 @@ export function applyCuration(
     manifest.tools.push(tool);
   }
 
+  // Carry derived connector configs through to the manifest (SP1 connectorConfigs).
+  manifest.connectorConfigs = { ...(manifest.connectorConfigs ?? {}), ...proposal.connectorConfigs };
+
   return McpServerManifest.parse(manifest);
 }
