@@ -106,8 +106,22 @@ function mapSecuritySchemes(spec: OpenApiDoc): AuthRequirement[] {
       kind = "basic";
     } else if (type === "http") {
       kind = "bearer";
-    } else if (type === "oauth2" || type === "openIdConnect") {
+    } else if (type === "oauth2") {
       kind = "oauth2";
+      const flows = (scheme["flows"] ?? {}) as Record<string, Record<string, unknown>>;
+      const flow = flows["authorizationCode"] ?? Object.values(flows)[0];
+      if (flow) {
+        if (typeof flow["authorizationUrl"] === "string") detail["authorizationUrl"] = flow["authorizationUrl"];
+        if (typeof flow["tokenUrl"] === "string") detail["tokenUrl"] = flow["tokenUrl"];
+        const scopes = flow["scopes"];
+        if (scopes && typeof scopes === "object") {
+          const names = Object.keys(scopes as Record<string, unknown>);
+          if (names.length > 0) detail["scopes"] = names.join(" ");
+        }
+      }
+    } else if (type === "openIdConnect") {
+      kind = "oauth2";
+      if (typeof scheme["openIdConnectUrl"] === "string") detail["issuer"] = scheme["openIdConnectUrl"];
     } else {
       kind = "none";
     }

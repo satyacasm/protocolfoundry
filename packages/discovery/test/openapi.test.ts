@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ingestOpenApi } from "../src/openapi.js";
 
+
 const SPEC_PATH = join(import.meta.dirname, "../../../examples/taskboard/openapi.json");
 
 describe("ingestOpenApi", () => {
@@ -58,5 +59,59 @@ describe("ingestOpenApi", () => {
     expect(graph.operations[0]!.id).toBe("ping");
 
     expect(() => ingestOpenApi('{"swagger": "2.0"}', "p", "s")).toThrow(/only 3\.x/);
+  });
+});
+
+describe("OpenAPI auth scheme detail", () => {
+  it("preserves oauth2 authorizationCode flow URLs and scopes", async () => {
+    const spec = JSON.stringify({
+      openapi: "3.0.0",
+      info: { title: "t", version: "1" },
+      servers: [{ url: "https://api.example.com" }],
+      paths: {
+        "/ping": { get: { operationId: "ping", responses: { "200": { description: "ok" } } } },
+      },
+      components: {
+        securitySchemes: {
+          oauthScheme: {
+            type: "oauth2",
+            flows: {
+              authorizationCode: {
+                authorizationUrl: "https://example.com/authorize",
+                tokenUrl: "https://example.com/token",
+                scopes: { read: "Read", write: "Write" },
+              },
+            },
+          },
+          oidcScheme: {
+            type: "openIdConnect",
+            openIdConnectUrl: "https://example.com/.well-known/openid-configuration",
+          },
+        },
+      },
+    });
+    const graph = await ingestOpenApi(spec, "proj", "src-1");
+    const oauth = graph.authRequirements.find((a) => a.id === "oauthScheme")!;
+    expect(oauth.kind).toBe("oauth2");
+    expect(oauth.detail?.authorizationUrl).toBe("https://example.com/authorize");
+    expect(oauth.detail?.tokenUrl).toBe("https://example.com/token");
+    expect(oauth.detail?.scopes).toBe("read write");
+
+    const oidc = graph.authRequirements.find((a) => a.id === "oidcScheme")!;
+    expect(oidc.kind).toBe("oauth2");
+    expect(oidc.detail?.issuer).toBe("https://example.com/.well-known/openid-configuration");
+  });
+
+  it("invents no detail fields for an oauth2 scheme with no flows", async () => {
+    const spec = JSON.stringify({
+      openapi: "3.0.0",
+      info: { title: "t", version: "1" },
+      servers: [{ url: "https://api.example.com" }],
+      paths: { "/ping": { get: { operationId: "ping", responses: { "200": { description: "ok" } } } } },
+      components: { securitySchemes: { bare: { type: "oauth2" } } },
+    });
+    const graph = await ingestOpenApi(spec, "proj", "src-1");
+    const bare = graph.authRequirements.find((a) => a.id === "bare")!;
+    expect(bare.detail).toEqual({});
   });
 });
