@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  activeModelLabel,
   applyApprovedCuration,
   runCuration,
   stageNaiveRelease,
@@ -56,6 +57,7 @@ export default async function CuratePage({
         your approval: stage a naive release from hand-picked operations, or
         run the LLM curation pass and review its proposal.
       </p>
+      <p className="faint">Active model: {activeModelLabel()} (set PF_ANTHROPIC_MODEL to change)</p>
 
       {notice ? <p className="flash ok-flash">{notice}</p> : null}
       {error ? <p className="flash bad-flash">{error}</p> : null}
