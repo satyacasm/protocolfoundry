@@ -2,7 +2,6 @@
 
 import { redirect } from "next/navigation";
 import { applyCuration, createAnthropicCurator, createAnthropicConnectorDeriver, proposeCuration } from "@protocolfoundry/curation";
-import { resolveGlobalModel } from "@protocolfoundry/core";
 import {
   createAnthropicDocsExtractor,
   ingestSource,
@@ -168,11 +167,6 @@ export async function applyApprovedCuration(formData: FormData): Promise<void> {
   redirect(
     `/projects/${projectId}?notice=${encodeURIComponent(`v${version} staged (curated, no eval yet) — run pf eval before promoting`)}`,
   );
-}
-
-/** The active model the LLM steps will use, for read-only display on the dashboard. */
-export function activeModelLabel(): string {
-  return resolveGlobalModel(undefined, "curation");
 }
 
 export async function stageNaiveRelease(formData: FormData): Promise<void> {
