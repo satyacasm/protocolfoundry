@@ -9,6 +9,7 @@ import {
 /** The raw shape the LLM returns; each `config` is validated against ConnectorConfig. */
 export interface RawConnectorDerivation {
   connectors: { authRequirementId: string; config: unknown }[];
+  /** Reserved for SP3 dashboard review — not yet surfaced into the proposal. */
   warnings?: { authRequirementId: string; reason: string }[];
 }
 
@@ -23,7 +24,7 @@ export function buildConnectorPrompt(graph: WorkflowGraph): string {
   const auth = graph.authRequirements.map((a) => ({ id: a.id, kind: a.kind, detail: a.detail ?? {} }));
   return `Here are an API's authentication requirements and base URLs (JSON):
 
-${JSON.stringify({ baseUrls: graph.baseUrls, authRequirements: auth }, null, 2)}`;
+${JSON.stringify({ projectId: graph.projectId, baseUrls: graph.baseUrls, authRequirements: auth }, null, 2)}`;
 }
 
 /** Static instructions, cached as the system block. */

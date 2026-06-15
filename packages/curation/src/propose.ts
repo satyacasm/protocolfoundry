@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import {
   ComposedToolProposal,
+  ConnectorConfig,
   CurationProposal,
   ExposureWarning,
   ToolRefinement,
@@ -223,7 +224,7 @@ export async function proposeCuration(
     tool.steps.every((step) => selected.has(step.operationId)),
   );
 
-  let connectorConfigs = {};
+  let connectorConfigs: Record<string, ConnectorConfig> = {};
   if (deriver) {
     const rawDerivation = await deriver.derive(buildConnectorPrompt(graph));
     connectorConfigs = validateDerivedConnectors(rawDerivation).configs;
