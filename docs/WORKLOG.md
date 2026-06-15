@@ -10,6 +10,12 @@
   CurationProposal; `applyCuration` writes them to the manifest. OpenAPI ingestor
   now preserves OAuth flow URLs / OIDC issuer (ADR-0013).
 - Curate page shows the active model read-only; `pf curate` prints derived configs.
+- Shipped: SP1+SP2 merged to `main` and pushed (live deploy from `main`, free-tier
+  `render.yaml`). First CI push failed the web build — a sync `activeModelLabel()`
+  exported from the `"use server"` forge-actions module (next build: "Server Actions
+  must be async"); fixed by calling `resolveGlobalModel` directly in the server
+  component. Verify `apps/web` with `npm run build -w @protocolfoundry/web` before
+  pushing — `npm test`/`tsc` don't run `next build`, and CI gates the deploy.
 - Next: SP3 (connect/rotation surfaces + writable model picker), SP4 (unsupported-API intake).
 
 ---
