@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ingestOpenApi } from "@protocolfoundry/discovery";
 import { applyCuration } from "../src/apply.js";
 import { proposeCuration, type Curator, type RawProposal } from "../src/propose.js";
+import { type ConnectorDeriver } from "../src/derive-connectors.js";
 
 const SPEC_PATH = join(import.meta.dirname, "../../../examples/taskboard/openapi.json");
 
@@ -162,5 +163,49 @@ describe("applyCuration", () => {
     expect(gated.tools.find((t) => t.name === "purge_task")!.approval).toBe("perCall");
     // and the manifest stayed self-contained: deleteTask op was pulled in
     expect(gated.upstreamOperations["deleteTask"]).toBeDefined();
+  });
+});
+
+const fakeDeriver: ConnectorDeriver = {
+  model: "fake-deriver",
+  async derive() {
+    return {
+      connectors: [
+        {
+          authRequirementId: "auth1",
+          config: {
+            id: "oauth2-generic",
+            discovery: { issuer: "https://accounts.example.com" },
+            appCredentials: [{ id: "client_id", label: "Client ID", valueFormat: "id" }],
+            params: { callbackParam: "code" },
+            produces: [{ vaultRowId: "EXAMPLE_TOKEN", from: "access_token" }],
+          },
+        },
+      ],
+    };
+  },
+};
+
+describe("connector derivation in curation", () => {
+  it("includes validated connectorConfigs in the proposal and applies them to the manifest", async () => {
+    const graph = await taskboardGraph();
+    const ids = graph.operations.map((o) => o.id);
+    const curator = { model: "fake-curator", async propose() { return CANNED; } };
+    const proposal = await proposeCuration(graph, ids, curator, fakeDeriver);
+    expect(proposal.connectorConfigs.auth1.id).toBe("oauth2-generic");
+
+    const manifest = applyCuration(graph, proposal, {
+      refinementOperationIds: "all",
+      composedToolNames: "all",
+    });
+    expect(manifest.connectorConfigs.auth1.discovery?.issuer).toBe("https://accounts.example.com");
+  });
+
+  it("defaults connectorConfigs to {} when no deriver is passed", async () => {
+    const graph = await taskboardGraph();
+    const ids = graph.operations.map((o) => o.id);
+    const curator = { model: "fake-curator", async propose() { return CANNED; } };
+    const proposal = await proposeCuration(graph, ids, curator);
+    expect(proposal.connectorConfigs).toEqual({});
   });
 });

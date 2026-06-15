@@ -6,7 +6,7 @@ import {
   AuthRequirement,
   Operation,
   WorkflowGraph,
-  resolveClaudeModel,
+  resolveGlobalModel,
   supportsAdaptiveThinking,
 } from "@protocolfoundry/core";
 import { ingestSource } from "./source.js";
@@ -392,10 +392,11 @@ Rules:
 /**
  * Real Claude-backed extractor. Requires ANTHROPIC_API_KEY in the environment.
  * Accepts a friendly alias ("haiku" | "sonnet" | "opus" | "fable") or a full
- * model ID; defaults to opus (extraction quality bounds everything downstream).
+ * model ID; defaults to the global model (PF_ANTHROPIC_MODEL, else haiku);
+ * set PF_ANTHROPIC_MODEL_DISCOVERY to raise just extraction.
  */
 export function createAnthropicDocsExtractor(modelOrAlias?: string): DocsExtractor {
-  const model = modelOrAlias ? resolveClaudeModel(modelOrAlias) : "claude-opus-4-8";
+  const model = resolveGlobalModel(modelOrAlias, "discovery");
   const client = new Anthropic();
   return {
     model,

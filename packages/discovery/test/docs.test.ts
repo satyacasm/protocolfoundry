@@ -425,4 +425,13 @@ describe("createAnthropicDocsExtractor", () => {
     expect(createAnthropicDocsExtractor("haiku").model).toBe("claude-haiku-4-5");
     expect(createAnthropicDocsExtractor("claude-sonnet-4-6").model).toBe("claude-sonnet-4-6");
   });
+
+  it("falls back to the global model env when no model is passed", () => {
+    delete process.env.PF_ANTHROPIC_MODEL_DISCOVERY;
+    process.env.PF_ANTHROPIC_MODEL = "sonnet";
+    expect(createAnthropicDocsExtractor().model).toBe("claude-sonnet-4-6");
+    delete process.env.PF_ANTHROPIC_MODEL;
+    // with nothing set it is now the haiku default, NOT the old opus default
+    expect(createAnthropicDocsExtractor().model).toBe("claude-haiku-4-5");
+  });
 });

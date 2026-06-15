@@ -24,6 +24,11 @@ npm run build
 - Optional but recommended: `ANTHROPIC_API_KEY` in your environment — needed
   only for the two LLM-powered steps (`pf curate`, `pf eval`). Everything else
   runs offline.
+- `PF_ANTHROPIC_MODEL` — global LLM model default used by all LLM-powered steps.
+  Accepts an alias (`haiku`, `sonnet`, `opus`, `fable`) or a full model id.
+  Defaults to `haiku`. Per-boundary overrides take precedence:
+  `PF_ANTHROPIC_MODEL_CURATION`, `PF_ANTHROPIC_MODEL_DISCOVERY`,
+  `PF_ANTHROPIC_MODEL_EVAL`, `PF_ANTHROPIC_MODEL_CONNECTOR` (ADR-0013).
 
 All `pf` commands below are run as:
 

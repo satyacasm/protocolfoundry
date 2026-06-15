@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ConnectorConfig } from "./connector.js";
 
 /**
  * A CurationProposal is the LLM curation pass's output artifact: suggested
@@ -66,6 +67,8 @@ export const CurationProposal = z.object({
   refinements: z.array(ToolRefinement),
   composedTools: z.array(ComposedToolProposal),
   warnings: z.array(ExposureWarning),
+  /** Derived sanctioned-connect configs keyed by authRequirementId (ADR-0013). */
+  connectorConfigs: z.record(ConnectorConfig).default({}),
   /** Model that produced the proposal, e.g. claude-opus-4-8; "human" if hand-written. */
   proposedBy: z.string(),
   createdAt: z.string().datetime(),

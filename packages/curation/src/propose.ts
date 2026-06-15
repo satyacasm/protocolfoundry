@@ -2,13 +2,15 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import {
   ComposedToolProposal,
+  ConnectorConfig,
   CurationProposal,
   ExposureWarning,
   ToolRefinement,
-  resolveClaudeModel,
+  resolveGlobalModel,
   supportsAdaptiveThinking,
   type WorkflowGraph,
 } from "@protocolfoundry/core";
+import { buildConnectorPrompt, validateDerivedConnectors, type ConnectorDeriver } from "./derive-connectors.js";
 
 /**
  * The raw shape the LLM must return (structured output). Mirrors
@@ -164,7 +166,7 @@ export function buildCurationPrompt(graph: WorkflowGraph, operationIds: string[]
  * model ID; defaults to haiku.
  */
 export function createAnthropicCurator(modelOrAlias?: string): Curator {
-  const model = resolveClaudeModel(modelOrAlias);
+  const model = resolveGlobalModel(modelOrAlias, "curation");
   const client = new Anthropic();
   return {
     model,
@@ -205,6 +207,7 @@ export async function proposeCuration(
   graph: WorkflowGraph,
   operationIds: string[],
   curator: Curator,
+  deriver?: ConnectorDeriver,
 ): Promise<CurationProposal> {
   const known = new Set(graph.operations.map((op) => op.id));
   const unknown = operationIds.filter((id) => !known.has(id));
@@ -221,12 +224,19 @@ export async function proposeCuration(
     tool.steps.every((step) => selected.has(step.operationId)),
   );
 
+  let connectorConfigs: Record<string, ConnectorConfig> = {};
+  if (deriver) {
+    const rawDerivation = await deriver.derive(buildConnectorPrompt(graph));
+    connectorConfigs = validateDerivedConnectors(rawDerivation).configs;
+  }
+
   return CurationProposal.parse({
     proposalVersion: 1,
     projectId: graph.projectId,
     refinements,
     composedTools,
     warnings: raw.warnings.filter((w) => selected.has(w.operationId)),
+    connectorConfigs,
     proposedBy: curator.model,
     createdAt: new Date().toISOString(),
   });

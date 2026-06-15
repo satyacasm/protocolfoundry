@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { applyCuration, createAnthropicCurator, proposeCuration } from "@protocolfoundry/curation";
+import { applyCuration, createAnthropicCurator, createAnthropicConnectorDeriver, proposeCuration } from "@protocolfoundry/curation";
+import { resolveGlobalModel } from "@protocolfoundry/core";
 import {
   createAnthropicDocsExtractor,
   ingestSource,
@@ -111,10 +112,12 @@ export async function runCuration(formData: FormData): Promise<void> {
     const graph = await getGraph(projectId);
     if (!graph) throw new Error("No ingested graph for this project");
     const curator = createAnthropicCurator();
+    const deriver = process.env.ANTHROPIC_API_KEY ? createAnthropicConnectorDeriver() : undefined;
     const proposal = await proposeCuration(
       graph,
       graph.operations.map((op) => op.id),
       curator,
+      deriver,
     );
     await saveProposal(proposal);
     await appendAudit("manifestChange", projectId, { action: "curationProposed", model: curator.model }, actor);
@@ -165,6 +168,11 @@ export async function applyApprovedCuration(formData: FormData): Promise<void> {
   redirect(
     `/projects/${projectId}?notice=${encodeURIComponent(`v${version} staged (curated, no eval yet) — run pf eval before promoting`)}`,
   );
+}
+
+/** The active model the LLM steps will use, for read-only display on the dashboard. */
+export function activeModelLabel(): string {
+  return resolveGlobalModel(undefined, "curation");
 }
 
 export async function stageNaiveRelease(formData: FormData): Promise<void> {
