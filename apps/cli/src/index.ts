@@ -15,6 +15,8 @@ import { createVaultFromEnv } from "@protocolfoundry/vault";
 import {
   applyCuration,
   createAnthropicCurator,
+  createAnthropicConnectorDeriver,
+  formatConnectorConfigs,
   proposeCuration,
 } from "@protocolfoundry/curation";
 import {
@@ -53,6 +55,7 @@ Usage:
       composed task-level tools. Requires ANTHROPIC_API_KEY. Review the
       proposal before applying it. --model takes an alias (haiku, sonnet,
       opus, fable) or a full Claude model id; default haiku.
+      Model defaults to PF_ANTHROPIC_MODEL (else haiku); --model overrides this run.
 
   pf apply <graph.json> <proposal.json> [--refinements <op1,...>|all]
            [--composed <name1,...>|all] [--name <serverName>] [--base-url <url>]
@@ -216,8 +219,9 @@ async function main(): Promise<void> {
       ? select.split(",").map((s) => s.trim())
       : graph.operations.map((op) => op.id);
     const curator = createAnthropicCurator(flags.get("--model") ?? undefined);
+    const deriver = createAnthropicConnectorDeriver(flags.get("--model") ?? undefined);
     console.log(`Curating ${operationIds.length} operation(s) with ${curator.model}...`);
-    const proposal = await proposeCuration(graph, operationIds, curator);
+    const proposal = await proposeCuration(graph, operationIds, curator, deriver);
     const outPath = flags.get("-o") ?? "proposal.json";
     await writeFile(outPath, JSON.stringify(proposal, null, 2), "utf8");
     console.log(`Proposal -> ${outPath}`);
@@ -228,6 +232,8 @@ async function main(): Promise<void> {
       console.log(`    ${t.name} (${t.steps.map((s) => s.operationId).join(" -> ")})`);
     }
     for (const w of proposal.warnings) console.log(`  WARNING ${w.operationId}: ${w.reason}`);
+    console.log("\nDerived sanctioned-connect configs (review before apply):");
+    console.log(formatConnectorConfigs(proposal.connectorConfigs));
     console.log("Review the proposal, then run: pf apply <graph> <proposal>");
     return;
   }
