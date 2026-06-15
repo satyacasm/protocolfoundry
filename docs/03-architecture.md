@@ -91,11 +91,22 @@ This is the single most important early architecture choice — it is what makes
   SDK). Implemented: OpenAPI, Postman, docs-page URLs (spec autodiscovery →
   LLM extraction fallback, ADR-0010).
 - `packages/generator` — graph → manifest.
+- `packages/curation` — LLM curation pass (ADR-0004): proposes agent-friendly
+  tool names/descriptions and composed task-level tools into a `CurationProposal`
+  (human-reviewed); `applyCuration` writes the approved proposal to the manifest.
+  Also houses a `ConnectorDeriver` LLM boundary that derives best-effort
+  `ConnectorConfig`s from the graph's auth requirements and base URLs, folded into
+  the same `CurationProposal` and applied by `applyCuration` — reusing the
+  human-approve-before-apply gate with no new approval surface (ADR-0013).
 - `packages/connectors` — shared, data-driven connector engine: OAuth2/OIDC
   authorization-code flow with OIDC discovery and a safe transform vocabulary
   (`sha256`/`concat`) for non-standard providers; emits `SealedSecret[]` into
   existing vault rows (ADR-0012).
 - `packages/evals` — agent-loop harness.
+- **LLM model selection:** all `createAnthropic*` factories resolve the active
+  model via `resolveGlobalModel` (core), which honors a single global default
+  (`PF_ANTHROPIC_MODEL`, falling back to haiku) with per-boundary overrides
+  (`PF_ANTHROPIC_MODEL_<BOUNDARY>`) and per-call explicit overrides (ADR-0013).
 - Postgres (likely Neon/Supabase). Eval runs triggered from the dashboard
   execute as in-process jobs against an ephemeral loopback gateway (ADR-0008);
   a real DB-backed queue arrives with multi-tenancy.

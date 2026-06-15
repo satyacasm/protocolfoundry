@@ -1,6 +1,18 @@
 # Worklog
 
 <!-- newest entry goes directly below this line -->
+## 2026-06-15 — SP2: global model switch + connector derivation
+
+- `resolveGlobalModel` (core): one global default (`PF_ANTHROPIC_MODEL`, else haiku)
+  honored by all LLM factories; per-boundary + per-call overrides. Drops the old
+  per-site pins (discovery no longer defaults to opus).
+- `ConnectorDeriver` (curation) derives ConnectorConfigs into the reviewed
+  CurationProposal; `applyCuration` writes them to the manifest. OpenAPI ingestor
+  now preserves OAuth flow URLs / OIDC issuer (ADR-0013).
+- Curate page shows the active model read-only; `pf curate` prints derived configs.
+- Next: SP3 (connect/rotation surfaces + writable model picker), SP4 (unsupported-API intake).
+
+---
 ## 2026-06-13 — SP1: connector engine core
 
 - Added `@protocolfoundry/connectors` (engine, OIDC discovery, safe transform
